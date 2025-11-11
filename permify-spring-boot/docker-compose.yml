@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  permify:
+    image: permify/permify:v1.3.9
+    container_name: permify-server
+    ports:
+      - "3476:3476"
+    command: ["serve"]
+    volumes:
+      - permify_data:/app/.permify/data
+    environment:
+      - PERMIFY_TENANT_ID=default
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3476/healthz" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  permify_data:

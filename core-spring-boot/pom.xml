@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <packaging>jar</packaging>
+    <parent>
+        <groupId>cv.igrp.framework.auth</groupId>
+        <artifactId>backend</artifactId>
+        <version>0.1.0-beta.1</version>
+    </parent>
+
+    <artifactId>core-spring-boot</artifactId>
+    <description>iGRP 3.0 Framework Auth Core Spring Boot</description>
+    <url>https://igrp.cv</url>
+
+    <dependencies>
+
+        <!-- Spring Starter Dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <scope>provided</scope>
+            <version>3.5.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+            <version>3.5.6</version>
+        </dependency>
+
+        <!-- Spring Security Dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+            <version>3.5.6</version>
+        </dependency>
+
+        <!-- IGRP Auth Dependencies -->
+        <dependency>
+            <groupId>cv.igrp.framework.auth</groupId>
+            <artifactId>core</artifactId>
+            <version>0.1.0-beta.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>cv.igrp.platform.access</groupId>
+            <artifactId>client</artifactId>
+            <version>0.1.0-beta-20251103.123233-12</version>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>3.5.6</version>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

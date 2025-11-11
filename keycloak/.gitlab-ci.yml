@@ -1,0 +1,32 @@
+stages:
+  - trigger-deploy
+
+trigger-deploy:
+  image: alpine
+  stage: trigger-deploy
+  only:
+    - github-release
+  script:
+    - set -e
+      - echo "Triggering Maven Deploy Repository IGRP Platform Report Core Java..."
+    - apk add --no-cache curl
+    # Check required variables
+    - '[ -z "$GITLAB_DEPLOY_TOKEN" ] && echo "Missing GITLAB_DEPLOY_TOKEN" && exit 1'
+    - '[ -z "$GITLAB_DEPLOY_PROJECT_ID" ] && echo "Missing GITLAB_DEPLOY_PROJECT_ID" && exit 1'
+    # Trigger the downstream pipeline
+    - |
+      RESPONSE=$(curl -s -w "%{http_code}" -o /tmp/response.txt \
+        -X POST \
+        -F "token=${GITLAB_DEPLOY_TOKEN}" \
+        -F "ref=deploy" \
+        -F "variables[LIBRARY_NAME]=${CI_PROJECT_NAME}" \
+        -F "variables[GROUP_PATH]=${CI_GROUP_PATH}" \
+        "https://git.nosi.cv/api/v4/projects/${GITLAB_DEPLOY_PROJECT_ID}/trigger/pipeline")
+
+      if [ "$RESPONSE" -ne 201 ]; then
+        echo "❌ Pipeline trigger failed. HTTP status: $RESPONSE"
+        cat /tmp/response.txt
+        exit 1
+      else
+        echo "✅ Successfully triggered deploy pipeline for ${CI_PROJECT_NAME}"
+      fi

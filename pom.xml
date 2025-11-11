@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>cv.igrp.framework.auth</groupId>
+    <artifactId>backend</artifactId>
+    <version>0.1.0-beta.1</version>
+    <packaging>pom</packaging>
+
+    <name>iGRP Framework Auth Backend</name>
+    <description>iGRP Framework Auth Backend — SDKs for authentication module</description>
+
+    <modules>
+        <module>core</module>
+        <module>core-spring-boot</module>
+        <module>keycloak</module>
+        <module>keycloak-spring-boot</module>
+        <module>permify-spring-boot</module>
+        <module>wso2</module>
+        <module>wso2-spring-boot</module>
+    </modules>
+
+    <properties>
+        <java.version>21</java.version>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <igrp.encoding>UTF-8</igrp.encoding>
+        <project.build.sourceEncoding>${igrp.encoding}</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>${igrp.encoding}</project.reporting.outputEncoding>
+    </properties>
+
+    <scm>
+        <url>http://git.nosi.cv/igrp-3_0/igrp-framework-auth-backend-monorepo</url>
+        <connection>scm:git:git.nosi.cv:igrp-3_0/igrp-framework-auth-backend-monorepo.git</connection>
+    </scm>
+
+    <licenses>
+        <license>
+            <name>Apache License 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>nosi</id>
+            <name>NOSi</name>
+            <email>helpdesk@nosi.cv</email>
+            <url>https://nosi.cv</url>
+            <organization>NOSi E.P.E - Núcleo Operacional Para a Sociedade de Informação</organization> <!-- Organization the developer belongs to -->
+            <organizationUrl>https://nosi.cv</organizationUrl> <!-- Organization website -->
+            <roles>
+                <role>developer</role>
+            </roles>
+            <timezone>-1</timezone>
+        </developer>
+    </developers>
+
+    <repositories>
+        <repository>
+            <id>igrp-releases</id>
+            <url>https://sonatype.nosi.cv/repository/igrp-framework-releases/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>igrp-snapshots</id>
+            <url>https://sonatype.nosi.cv/repository/igrp-framework/</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <distributionManagement>
+        <repository>
+            <id>igrp-framework-releases</id>
+            <url>https://sonatype.nosi.cv/repository/igrp-framework-releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>igrp-framework</id>
+            <url>https://sonatype.nosi.cv/repository/igrp-framework/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+</project>

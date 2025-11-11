@@ -1,0 +1,71 @@
+// BASE ENTITIES (static)
+entity user {}
+
+// DYNAMIC DEPARTMENTS (1 per department in access management)
+// Generated from: AccessManagementDB.Departments
+entity department:<department_code> {
+    // Roles from: AccessManagementDB.DepartmentRoles
+    // FOR EACH role IN department_roles:
+    relation <role_name> @user
+    
+    // Hierarchy from parent_code
+    relation parent @department:<parent_code>?
+    
+    permission view = <role1> or <role2> or parent.view
+    permission manage = <admin_role> or parent.manage
+}
+
+// DYNAMIC ROLES (1 per role in system)
+// Generated from: AccessManagementDB.Roles
+entity role:<role_name> {
+    relation member @user
+    permission inherit = member
+}
+
+// DYNAMIC APPLICATIONS (1 per app)
+// Generated from: AccessManagementDB.Applications
+entity application:<app_code> {
+    relation department @department:<dept_code>
+    
+    // FOR EACH app_role IN application_roles:
+    relation <app_role_name> @user @role
+    
+    permission access = department.<dept_role> or <app_role1> or <app_role2>
+}
+
+// DYNAMIC RESOURCE GROUPS (1 per resource)
+// Generated from: AccessManagementDB.Resources
+entity resource:<resource_name> {
+    relation application @application:<app_code>
+    
+    // FOR EACH permission IN resource_permissions:
+    permission <permission_name> = 
+        application.<app_role> or 
+        role:<role_name>#member
+}
+
+// DYNAMIC RESOURCE ITEMS (API endpoints/UI components)
+// Generated from: AccessManagementDB.ResourceItems
+entity resource_item:<item_name> {
+    relation resource @resource:<resource_name>
+    
+    // Direct permission assignments
+    // FOR EACH permission IN item_permissions:
+    permission <permission_name> = 
+        resource.<permission_name> or 
+        role:<role_name>#member
+}
+
+// RELATIONSHIP TEMPLATES (to be populated)
+relationships:
+  // User-Role assignments
+  // FOR EACH user_role IN user_roles:
+  "role:<role_name>#member@user:<username>"
+  
+  // Resource-Application links
+  // FOR EACH resource IN resources:
+  "resource:<resource_name>#application@application:<app_code>"
+  
+  // Permission-Role grants
+  // FOR EACH role_permission IN role_permissions:
+  "resource:<resource_name>#<permission_name>@role:<role_name>"

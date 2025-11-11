@@ -1,0 +1,12 @@
+stages:
+  - trigger-deploy
+
+trigger-deploy:
+  image: alpine:latest
+  stage: trigger-deploy
+  only:
+    - github-release
+  script:
+    - echo "Triggering Maven Deploy Repository..."
+    - apk add --no-cache curl
+    - curl -X POST -F token=${GITLAB_DEPLOY_TOKEN} -F ref=deploy -F "variables[LIBRARY_NAME]=${CI_PROJECT_NAME}" -F "variables[GROUP_PATH]=${CI_GROUP_PATH}" https://git.nosi.cv/api/v4/projects/${GITLAB_DEPLOY_PROJECT_ID}/trigger/pipeline

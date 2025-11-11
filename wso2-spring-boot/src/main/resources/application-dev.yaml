@@ -1,0 +1,30 @@
+server:
+  port: ${SERVER_PORT:8080}
+spring:
+  config:
+    activate:
+      on-profile: dev
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWK_URI:https://localhost:9443/oauth2/jwks}
+
+iam:
+  security:
+    enabled: ${WSO2_ENABLED:true}
+wso2:
+  host: ${WSO2_HOST:https://localhost:9443}
+  credentials:
+    username: ${USERNAME:admin}
+    password: ${PASSWORD:admin}
+    grant-type: ${GRANT_TYPE:password}
+  api:
+    server:
+      base-path: t/carbon.super/api/server/v1
+      application-path: applications
+    scim:
+      base-path: scim2
+      user-path: Users
+      group-path: Groups
+      role-path: Roles
