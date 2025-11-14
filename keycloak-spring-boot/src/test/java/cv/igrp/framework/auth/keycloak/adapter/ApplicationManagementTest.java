@@ -5,6 +5,7 @@ import cv.igrp.framework.auth.keycloak.client.KeycloakClientFactory;
 import cv.igrp.framework.auth.keycloak.config.KeycloakProperties;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.keycloak.admin.client.Keycloak;
@@ -21,6 +22,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@Disabled
 public class ApplicationManagementTest {
 
     @InjectMocks

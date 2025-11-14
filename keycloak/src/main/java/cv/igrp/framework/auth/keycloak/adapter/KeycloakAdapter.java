@@ -395,43 +395,44 @@ public class KeycloakAdapter implements IAdapter {
                 LOGGER.info("[createUser] User creation response status: {}", userResponse.getStatus());
                 if (!(userResponse.getStatus() >= 200 && userResponse.getStatus() < 300))
                     throw new IAMException("Error creating user. HTTP Status: " + userResponse.getStatus());
-                LOGGER.info("User created: {}", ofNullable(userResponse.getEntity()).orElse(userIdentity.getUsername()));
+                LOGGER.info("User created: {}", ofNullable(userResponse.getEntity()).orElse(userIdentity.getEmail()));
             }
         } catch (Exception ex) {
-            LOGGER.error("Failed to create user '{}'", userIdentity.getUsername(), ex);
+            LOGGER.error("Failed to create user '{}'", userIdentity.getEmail(), ex);
             throw new IAMException("Error creating user", ex);
         }
     }
 
     @Override
-    public Optional<UserIdentity> resolveUser(String username) {
-        LOGGER.info("[resolveUser] Input param: username={}", username);
+    public Optional<UserIdentity> resolveUser(String email) {
+        LOGGER.info("[resolveUser] Input param: email={}", email);
         try (Keycloak keycloak = keycloakClientFactory.createClient()) {
             RealmResource realmResource = keycloak.realm(keycloakProperties.getRealm());
-            List<UserRepresentation> foundUsers = realmResource.users().search(username, true);
+            List<UserRepresentation> foundUsers = realmResource.users().searchByEmail(email, true);
             LOGGER.info("[resolveUser] Users found: {}", foundUsers.size());
             return foundUsers
                     .stream()
                     .findFirst()
                     .map(user -> {
-                        LOGGER.info("User '{}' resolved successfully", username);
+                        LOGGER.info("User '{}' resolved successfully", email);
                         return IGRPUserRepresentation.builder()
                                 .id(user.getId())
                                 .email(user.getEmail())
                                 .firstName(user.getFirstName())
                                 .lastName(user.getLastName())
                                 .enable(true)
+                                .externalId(user.getId())
                                 .build();
                     });
         } catch (Exception ex) {
-            LOGGER.error("Failed when resolving user '{}'", username, ex);
+            LOGGER.error("Failed when resolving user '{}'", email, ex);
             return Optional.empty();
         }
     }
 
     @Override
-    public void assignRoleToUser(String departmentCode, String roleName, String username) throws IAMException {
-        LOGGER.info("[assignRoleToUser] Input params: departmentCode={}, roleName={}, username={}", departmentCode, roleName, username);
+    public void assignRoleToUser(String departmentCode, String roleName, String sub) throws IAMException {
+        LOGGER.info("[assignRoleToUser] Input params: departmentCode={}, roleName={}, sub={}", departmentCode, roleName, sub);
         try (Keycloak keycloak = keycloakClientFactory.createClient()) {
             RealmResource realmResource = keycloak.realm(keycloakProperties.getRealm());
 
@@ -448,20 +449,20 @@ public class KeycloakAdapter implements IAdapter {
                 throw new IAMException("Role group not found for path: " + roleGroupPath);
             }
 
-            UserIdentity user = resolveUser(username)
-                    .orElseThrow(() -> new IAMException("User not found: " + username));
-            LOGGER.info("[assignRoleToUser] User fetched: {}", user.getUsername());
+            UserIdentity user = resolveUserById(sub)
+                    .orElseThrow(() -> new IAMException("User not found: " + sub));
+            LOGGER.info("[assignRoleToUser] User fetched: {}", user.getEmail());
             realmResource.users().get(user.getId()).joinGroup(roleGroup.getId());
-            LOGGER.info("User '{}' assigned to role '{}' in department '{}'", username, roleName, departmentCode);
+            LOGGER.info("User '{}' assigned to role '{}' in department '{}'", sub, roleName, departmentCode);
         } catch (Exception ex) {
-            LOGGER.error("Failed to assign role '{}' to user '{}'", roleName, username, ex);
+            LOGGER.error("Failed to assign role '{}' to user '{}'", roleName, sub, ex);
             throw new IAMException("Error assigning role to user", ex);
         }
     }
 
     @Override
-    public void unassignRoleFromUser(String departmentCode, String roleName, String username) throws IAMException {
-        LOGGER.info("[unassignRoleFromUser] Input params: departmentCode={}, roleName={}, username={}", departmentCode, roleName, username);
+    public void unassignRoleFromUser(String departmentCode, String roleName, String sub) throws IAMException {
+        LOGGER.info("[unassignRoleFromUser] Input params: departmentCode={}, roleName={}, sub={}", departmentCode, roleName, sub);
         try (Keycloak keycloak = keycloakClientFactory.createClient()) {
             RealmResource realmResource = keycloak.realm(keycloakProperties.getRealm());
 
@@ -478,13 +479,13 @@ public class KeycloakAdapter implements IAdapter {
                 throw new IAMException("Role group not found for path: " + roleGroupPath);
             }
 
-            UserIdentity user = resolveUser(username)
-                    .orElseThrow(() -> new IAMException("User not found: " + username));
-            LOGGER.info("[unassignRoleFromUser] User fetched: {}", user.getUsername());
+            UserIdentity user = resolveUserById(sub)
+                    .orElseThrow(() -> new IAMException("User not found: " + sub));
+            LOGGER.info("[unassignRoleFromUser] User fetched: {}", user.getEmail());
             realmResource.users().get(user.getId()).leaveGroup(roleGroup.getId());
-            LOGGER.info("User '{}' unassigned from role '{}' in department '{}'", username, roleName, departmentCode);
+            LOGGER.info("User '{}' unassigned from role '{}' in department '{}'", sub, roleName, departmentCode);
         } catch (Exception ex) {
-            LOGGER.error("Failed to unassign role '{}' from user '{}'", roleName, username, ex);
+            LOGGER.error("Failed to unassign role '{}' from user '{}'", roleName, sub, ex);
             throw new IAMException("Error unassigning role from user", ex);
         }
     }
@@ -958,6 +959,7 @@ public class KeycloakAdapter implements IAdapter {
                             .firstName(user.getFirstName())
                             .lastName(user.getLastName())
                             .enable(user.isEnabled())
+                            .externalId(user.getId())
                             .emailVerified(user.isEmailVerified())
                             .build())
                     .collect(Collectors.toList());
@@ -970,11 +972,14 @@ public class KeycloakAdapter implements IAdapter {
     }
 
     @Override
-    public Map<String, Set<String>> getUserRoles(String username) throws IAMException {
+    public Map<String, Set<String>> getUserRoles(String sub) throws IAMException {
         try (Keycloak keycloak = keycloakClientFactory.createClient()) {
             RealmResource realmResource = keycloak.realm(keycloakProperties.getRealm());
-            UserRepresentation user = realmResource.users().search(username, true).stream().findFirst()
-                    .orElseThrow(() -> new IAMException("User not found: " + username));
+            UserResource userResource = realmResource.users().get(sub);
+            if(userResource == null)
+               throw new IAMException("User not found: " + sub);
+
+            UserRepresentation user = userResource.toRepresentation();
 
             List<GroupRepresentation> userGroups = realmResource.users().get(user.getId()).groups();
 
@@ -985,7 +990,7 @@ public class KeycloakAdapter implements IAdapter {
                             Collectors.mapping(GroupRepresentation::getName, Collectors.toSet())
                     ));
         } catch (Exception ex) {
-            LOGGER.error("Failed to retrieve roles for user '{}'", username, ex);
+            LOGGER.error("Failed to retrieve roles for user '{}'", sub, ex);
             throw new IAMException("Error retrieving user roles", ex);
         }
     }
@@ -1008,7 +1013,7 @@ public class KeycloakAdapter implements IAdapter {
 
             List<UserRepresentation> users = realmResource.groups().group(roleGroup.getId()).members();
             return users.stream()
-                    .map(UserRepresentation::getUsername)
+                    .map(UserRepresentation::getId)
                     .collect(Collectors.toSet());
         } catch (Exception ex) {
             LOGGER.error("Failed to retrieve users for role '{}'", roleName, ex);
@@ -1025,8 +1030,8 @@ public class KeycloakAdapter implements IAdapter {
             Map<String, Map<String, Set<String>>> result = new HashMap<>();
 
             for (UserRepresentation user : users) {
-                Map<String, Set<String>> userRoles = getUserRoles(user.getUsername());
-                result.put(user.getUsername(), userRoles);
+                Map<String, Set<String>> userRoles = getUserRoles(user.getId());
+                result.put(user.getId(), userRoles);
             }
 
             return result;
@@ -1748,6 +1753,26 @@ public class KeycloakAdapter implements IAdapter {
                 .findFirst()
                 .map(ClientRepresentation::getId)
                 .orElseThrow(() -> new IAMException("Client not found: " + keycloakProperties.getClientId()));
+    }
+
+    private Optional<UserIdentity> resolveUserById(String id) {
+        LOGGER.info("[resolveUser] Input param: id={}", id);
+        try (Keycloak keycloak = keycloakClientFactory.createClient()) {
+            RealmResource realmResource = keycloak.realm(keycloakProperties.getRealm());
+            UserRepresentation user = realmResource.users().get(id).toRepresentation();
+            LOGGER.info("[resolveUser] Users found: {}", id);
+            return Optional.of(IGRPUserRepresentation.builder()
+                                .id(user.getId())
+                                .email(user.getEmail())
+                                .firstName(user.getFirstName())
+                                .lastName(user.getLastName())
+                                .enable(true)
+                                .externalId(user.getId())
+                                .build());
+        } catch (Exception ex) {
+            LOGGER.error("Failed when resolving user with sub '{}'", id, ex);
+            return Optional.empty();
+        }
     }
 
 }
