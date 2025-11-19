@@ -1549,7 +1549,7 @@ public class KeycloakAdapter implements IAdapter {
                 .filter(group -> {
                     LOGGER.info("[findRoleParentGroup] Checking group: {} with path: {}", group.getName(), group.getPath());
                     return isRoleGroup(group) &&
-                            group.getPath().startsWith(departmentGroup.getPath());
+                            group.getPath().contains(departmentGroup.getPath());
                 })
                 .findFirst().orElse(departmentGroup);
 
@@ -1614,7 +1614,7 @@ public class KeycloakAdapter implements IAdapter {
                     // Check if this is the application group by name and ensure it's under the correct department
                     return normalizedAppName.equals(group.getName()) &&
                             group.getPath() != null &&
-                            group.getPath().startsWith("/" + departmentCode) &&
+                            group.getPath().contains("/" + departmentCode) &&
                             isApplicationGroup(group, allGroups);
                 })
                 .map(GroupRepresentation::getPath)
@@ -1642,7 +1642,7 @@ public class KeycloakAdapter implements IAdapter {
                     // Direct match by name and ensure it's under the correct department and is a role group
                     return roleName.equals(group.getName()) &&
                             group.getPath() != null &&
-                            group.getPath().startsWith("/" + departmentCode) &&
+                            group.getPath().contains("/" + departmentCode) &&
                             isRoleGroup(group);
                 })
                 .map(GroupRepresentation::getPath)
