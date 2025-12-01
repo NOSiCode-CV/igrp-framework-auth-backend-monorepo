@@ -47,7 +47,7 @@
         <dependency>
             <groupId>cv.igrp.platform.access</groupId>
             <artifactId>client</artifactId>
-            <version>0.1.0-beta-20251103.123233-12</version>
+            <version>0.1.0-beta-20251201.151237-13</version>
         </dependency>
 
     </dependencies>
