@@ -1,105 +1,75 @@
 package cv.igrp.framework.auth.core.security;
 
 import cv.igrp.framework.auth.generated.PermissionsRegistry;
-import cv.igrp.platform.access.client.ApiClient;
-import cv.igrp.platform.access.client.api.AuthorizeApi;
-import cv.igrp.platform.access.client.model.PermissionCheckRequestDTO;
-import cv.igrp.platform.access.client.model.PermissionCheckResponseDTO;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service("igrpAuthorization")
 @SuppressWarnings("unused")
 public class IgrpAuthorizationService {
 
-    private final ApiClient client;
-    private final AuthenticationHelper authHelper;
+    /**
+     * Extracts all granted authorities for the current authenticated user.
+     */
+    private Set<String> getCurrentAuthorities() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-    public IgrpAuthorizationService(ApiClient client, AuthenticationHelper authHelper) {
-        this.client = client;
-        this.authHelper = authHelper;
+        if (auth == null || auth.getAuthorities() == null) {
+            return Set.of();
+        }
+
+        return auth.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
     }
 
     /**
      * Checks if the current user has a specific permission.
-     *
-     * @param action the permission enum (e.g. "Permission.FINANCE_SALARY_VIEW")
-     * @return true if allowed, false otherwise
+     * Permissions come from JWT converter as simple string authorities.
      */
     public boolean checkPermission(PermissionsRegistry.Permission action) {
-        try {
-            String token = authHelper.getToken();
-            client.setAuthToken(token);
-            AuthorizeApi authorizeApi = new AuthorizeApi(client);
+        if (action == null) return false;
 
-            return authorizeApi.checkAuthorization(
-                    new PermissionCheckRequestDTO(null, action.getCode())
-            ).isAllowed();
-        } catch (Exception e) {
-            throw new RuntimeException("Error checking permission: " + action, e);
-        }
+        String permissionCode = action.getCode();
+        Set<String> authorities = getCurrentAuthorities();
+
+        return authorities.contains(permissionCode);
     }
 
     /**
-     * Checks if the user has ALL the given permissions.
-     *
-     * @param actions list or varargs of permission enums
-     * @return true only if ALL are allowed
+     * Checks if the user has ALL provided permissions.
      */
     public boolean checkAllPermissions(PermissionsRegistry.Permission... actions) {
         if (actions == null || actions.length == 0) {
             return false;
         }
 
-        try {
-            String token = authHelper.getToken();
-            client.setAuthToken(token);
-            AuthorizeApi authorizeApi = new AuthorizeApi(client);
+        Set<String> authorities = getCurrentAuthorities();
 
-            List<PermissionCheckRequestDTO> requests = new ArrayList<>();
-            Arrays.stream(actions).forEach(a -> requests.add(new PermissionCheckRequestDTO(null, a.getCode())));
-
-            List<PermissionCheckResponseDTO> responses =
-                    authorizeApi.batchCheckAuthorization(requests);
-
-            // Return true only if all are allowed
-            return responses.stream().allMatch(PermissionCheckResponseDTO::isAllowed);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Error checking all permissions: " + Arrays.toString(actions), e);
-        }
+        return Arrays.stream(actions)
+                .map(PermissionsRegistry.Permission::getCode)
+                .allMatch(authorities::contains);
     }
 
     /**
-     * Checks if the user has ANY of the given permissions.
-     *
-     * @param actions list or varargs of permission enums
-     * @return true if at least one is allowed
+     * Checks if the user has AT LEAST ONE of the provided permissions.
      */
     public boolean checkAnyPermission(PermissionsRegistry.Permission... actions) {
         if (actions == null || actions.length == 0) {
             return false;
         }
 
-        try {
-            String token = authHelper.getToken();
-            client.setAuthToken(token);
-            AuthorizeApi authorizeApi = new AuthorizeApi(client);
+        Set<String> authorities = getCurrentAuthorities();
 
-            List<PermissionCheckRequestDTO> requests = new ArrayList<>();
-            Arrays.stream(actions).forEach(a -> requests.add(new PermissionCheckRequestDTO(null, a.getCode())));
-
-            List<PermissionCheckResponseDTO> responses =
-                    authorizeApi.batchCheckAuthorization(requests);
-
-            // Return true if at least one permission is allowed
-            return responses.stream().anyMatch(PermissionCheckResponseDTO::isAllowed);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Error checking any permissions: " + Arrays.toString(actions), e);
-        }
+        return Arrays.stream(actions)
+                .map(PermissionsRegistry.Permission::getCode)
+                .anyMatch(authorities::contains);
     }
 }
