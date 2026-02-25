@@ -7,7 +7,7 @@
     <parent>
         <groupId>cv.igrp.framework.auth</groupId>
         <artifactId>backend</artifactId>
-        <version>0.1.0-beta.1</version>
+        <version>0.1.0-beta.2</version>
     </parent>
 
     <artifactId>core-spring-boot</artifactId>
@@ -41,13 +41,13 @@
         <dependency>
             <groupId>cv.igrp.framework.auth</groupId>
             <artifactId>core</artifactId>
-            <version>0.1.0-beta.1</version>
+            <version>0.1.0-beta.2</version>
         </dependency>
 
         <dependency>
             <groupId>cv.igrp.platform.access</groupId>
             <artifactId>client</artifactId>
-            <version>0.1.0-beta-20251103.123233-12</version>
+            <version>0.1.0-beta-20251205.100005-16</version>
         </dependency>
 
     </dependencies>

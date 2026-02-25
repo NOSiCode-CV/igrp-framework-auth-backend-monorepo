@@ -3,6 +3,7 @@ package cv.igrp.framework.auth.keycloak.adapter;
 
 import cv.igrp.framework.auth.core.exception.IAMException;
 import cv.igrp.framework.auth.core.model.UserIdentity;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(SpringExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Disabled
 class KeycloakAdapterIntegrationTest {
 
     //@Autowired

@@ -103,20 +103,20 @@ public interface IAdapter {
    *
    * @param departmentCode the code of the department containing the role
    * @param roleName the name of the role to assign
-   * @param username the user identifier (username or email)
+   * @param sub the user subject (sub)
    * @throws IAMException if there is an issue with the IAM system while assigning the role
    */
-  void assignRoleToUser(String departmentCode, String roleName, String username) throws IAMException;
+  void assignRoleToUser(String departmentCode, String roleName, String sub) throws IAMException;
 
   /**
    * Unassigns a role from a user.
    *
    * @param departmentCode the code of the department containing the role
    * @param roleName the name of the role to unassign
-   * @param username the user identifier (username or email)
+   * @param sub the user subject (sub or email)
    * @throws IAMException if there is an issue with the IAM system while unassigning the role
    */
-  void unassignRoleFromUser(String departmentCode, String roleName, String username) throws IAMException;
+  void unassignRoleFromUser(String departmentCode, String roleName, String sub) throws IAMException;
 
   /**
    * Creates a user with provided data.
@@ -129,10 +129,10 @@ public interface IAdapter {
   /**
    * Resolves a user based on the user identifier.
    *
-   * @param username the user identifier (username or email)
+   * @param email the user email
    * @return an Optional containing the user identity if found
    */
-  Optional<UserIdentity> resolveUser(String username);
+  Optional<UserIdentity> resolveUser(String email);
 
   /**
    * Creates a permission with a given name and description.
@@ -270,18 +270,18 @@ public interface IAdapter {
   /**
    * Retrieves roles assigned to a user.
    *
-   * @param username the user identifier
+   * @param sub the user subject
    * @return map where keys are department codes and values are role names
    * @throws IAMException if there are issue retrieving user roles
    */
-  Map<String, Set<String>> getUserRoles(String username) throws IAMException;
+  Map<String, Set<String>> getUserRoles(String sub) throws IAMException;
 
   /**
    * Retrieves users assigned to a role.
    *
    * @param departmentCode the department code
    * @param roleName the role name
-   * @return set of usernames
+   * @return set of subs
    * @throws IAMException if there are issue retrieving role users
    */
   Set<String> getRoleUsers(String departmentCode, String roleName) throws IAMException;
@@ -289,7 +289,7 @@ public interface IAdapter {
   /**
    * Retrieves all user-role assignments.
    *
-   * @return map where keys are usernames and values are maps of department to role sets
+   * @return map where keys are subs and values are maps of department to role sets
    * @throws IAMException if there's an issue retrieving all user roles
    */
   Map<String, Map<String, Set<String>>> getAllUserRoles() throws IAMException;
