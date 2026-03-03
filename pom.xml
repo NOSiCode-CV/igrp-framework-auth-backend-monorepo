@@ -13,6 +13,7 @@
     <description>iGRP Framework Auth Backend — SDKs for authentication module</description>
 
     <modules>
+        <module>client</module>
         <module>core</module>
         <module>core-spring-boot</module>
         <module>keycloak</module>
