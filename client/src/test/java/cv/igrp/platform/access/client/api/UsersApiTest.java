@@ -3,9 +3,7 @@ package cv.igrp.platform.access.client.api;
 import cv.igrp.platform.access.client.ApiException;
 import cv.igrp.platform.access.client.IApiClient;
 import cv.igrp.platform.access.client.JwtUtil;
-import cv.igrp.platform.access.client.model.IGRPUserDTO;
-import cv.igrp.platform.access.client.model.RoleDTO;
-import cv.igrp.platform.access.client.model.RoleUserDTO;
+import cv.igrp.platform.access.client.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -118,5 +116,58 @@ class UsersApiTest {
         assertTrue(result);
 
     }*/
+
+    @Test
+    void updateCurrentUser_Success() throws ApiException {
+        when(apiClient.invokeAPI(eq("/api/users/me"), eq("PUT"), isNull(), eq(sampleUser), isNull(), eq(IGRPUserDTO.class)))
+                .thenReturn(sampleUser);
+
+        IGRPUserDTO result = usersApi.updateCurrentUser(sampleUser);
+
+        assertNotNull(result);
+        assertEquals("John Doe", result.getName());
+        verify(apiClient).invokeAPI("/api/users/me", "PUT", null, sampleUser, null, IGRPUserDTO.class);
+    }
+
+    @Test
+    void getUserInvitationByToken_Success() throws ApiException {
+        InvitationDTO sampleInvitation = new InvitationDTO();
+
+        when(apiClient.invokeAPI(anyString(), eq("GET"), isNull(), isNull(), isNull(), eq(InvitationDTO.class)))
+                .thenReturn(sampleInvitation);
+
+        InvitationDTO result = usersApi.getUserInvitationByToken("abc123");
+
+        assertNotNull(result);
+        verify(apiClient).invokeAPI("/api/users/invite/by-token/abc123", "GET", null, null, null, InvitationDTO.class);
+    }
+
+    @Test
+    void validateInvitationEmail_Success() throws ApiException {
+        ValidateInvitationEmailRequest request = new ValidateInvitationEmailRequest();
+        OtpResponseDTO otpResponse = new OtpResponseDTO();
+
+        when(apiClient.invokeAPI(eq("/api/users/invite/validate-email"), eq("POST"), isNull(), eq(request), isNull(), eq(OtpResponseDTO.class)))
+                .thenReturn(otpResponse);
+
+        OtpResponseDTO result = usersApi.validateInvitationEmail(request);
+
+        assertNotNull(result);
+        verify(apiClient).invokeAPI("/api/users/invite/validate-email", "POST", null, request, null, OtpResponseDTO.class);
+    }
+
+    @Test
+    void validateInvitationOtp_Success() throws ApiException {
+        ValidateInvitationOtpRequest request = new ValidateInvitationOtpRequest();
+        OtpResponseDTO otpResponse = new OtpResponseDTO();
+
+        when(apiClient.invokeAPI(eq("/api/users/invite/validate-otp"), eq("POST"), isNull(), eq(request), isNull(), eq(OtpResponseDTO.class)))
+                .thenReturn(otpResponse);
+
+        OtpResponseDTO result = usersApi.validateInvitationOtp(request);
+
+        assertNotNull(result);
+        verify(apiClient).invokeAPI("/api/users/invite/validate-otp", "POST", null, request, null, OtpResponseDTO.class);
+    }
 
 }

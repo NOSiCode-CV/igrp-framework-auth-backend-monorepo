@@ -500,4 +500,69 @@ public class DepartmentsApi {
         String response = apiClient.invokeAPIRaw(path, "GET", null, null, null);
         return JsonUtil.deserialize(response, new TypeReference<>() {});
     }
+
+    // GET /api/departments/{code}/applications (with optional applicationCode filter)
+    public List<ApplicationDTO> getDepartmentApplications(String departmentCode, String applicationCode) throws ApiException, IOException, InterruptedException {
+        if (departmentCode == null) {
+            throw new ApiException(400, "Missing required parameter 'departmentCode'");
+        }
+        Map<String, String> queryParams = new HashMap<>();
+        if (applicationCode != null) queryParams.put("applicationCode", applicationCode);
+        String path = "/api/departments/{code}/applications".replace("{code}", departmentCode);
+        String response = apiClient.invokeAPIRaw(path, "GET", queryParams, null, null);
+        return JsonUtil.deserialize(response, new TypeReference<>() {});
+    }
+
+    // GET /api/departments/{departmentCode}/applications/{appCode}/menus (with optional menuCode filter)
+    public List<MenuEntryDTO> getDepartmentMenus(String departmentCode, String applicationCode, String menuCode) throws ApiException, IOException, InterruptedException {
+        if (departmentCode == null) {
+            throw new ApiException(400, "Missing required parameter 'departmentCode'");
+        }
+        if (applicationCode == null) {
+            throw new ApiException(400, "Missing required parameter 'applicationCode'");
+        }
+        Map<String, String> queryParams = new HashMap<>();
+        if (menuCode != null) queryParams.put("menuCode", menuCode);
+        String path = "/api/departments/{departmentCode}/applications/{applicationCode}/menus"
+                .replace("{departmentCode}", departmentCode)
+                .replace("{applicationCode}", applicationCode);
+        String response = apiClient.invokeAPIRaw(path, "GET", queryParams, null, null);
+        return JsonUtil.deserialize(response, new TypeReference<>() {});
+    }
+
+    // GET /api/departments/{code}/resources (with optional resourceName filter)
+    public List<ResourceDTO> getDepartmentResources(String departmentCode, String resourceName) throws ApiException, IOException, InterruptedException {
+        if (departmentCode == null) {
+            throw new ApiException(400, "Missing required parameter 'departmentCode'");
+        }
+        Map<String, String> queryParams = new HashMap<>();
+        if (resourceName != null) queryParams.put("resourceName", resourceName);
+        String path = "/api/departments/{code}/resources".replace("{code}", departmentCode);
+        String response = apiClient.invokeAPIRaw(path, "GET", queryParams, null, null);
+        return JsonUtil.deserialize(response, new TypeReference<>() {});
+    }
+
+    // GET /api/departments/{code}/permissions (with optional permissionName filter)
+    public List<PermissionDTO> getDepartmentPermissions(String departmentCode, String permissionName) throws ApiException, IOException, InterruptedException {
+        if (departmentCode == null) {
+            throw new ApiException(400, "Missing required parameter 'departmentCode'");
+        }
+        Map<String, String> queryParams = new HashMap<>();
+        if (permissionName != null) queryParams.put("permissionName", permissionName);
+        String path = "/api/departments/{code}/permissions".replace("{code}", departmentCode);
+        String response = apiClient.invokeAPIRaw(path, "GET", queryParams, null, null);
+        return JsonUtil.deserialize(response, new TypeReference<>() {});
+    }
+
+    // GET /api/departments/{departmentCode}/permissions/available (with optional resourceName filter)
+    public List<PermissionDTO> getAvailablePermissions(String departmentCode, String resourceName) throws ApiException, IOException, InterruptedException {
+        if (departmentCode == null) {
+            throw new ApiException(400, "Missing required parameter 'departmentCode'");
+        }
+        Map<String, String> queryParams = new HashMap<>();
+        if (resourceName != null) queryParams.put("resourceName", resourceName);
+        String path = "/api/departments/{departmentCode}/permissions/available".replace("{departmentCode}", departmentCode);
+        String response = apiClient.invokeAPIRaw(path, "GET", queryParams, null, null);
+        return JsonUtil.deserialize(response, new TypeReference<>() {});
+    }
 }

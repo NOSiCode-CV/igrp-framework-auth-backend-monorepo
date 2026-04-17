@@ -315,6 +315,27 @@ public class UsersApi {
         return JsonUtil.deserialize(response, new TypeReference<>() {});
     }
 
+    public IGRPUserDTO updateCurrentUser(IGRPUserDTO user) throws ApiException {
+        if (user == null) throw new ApiException(400, "Missing required parameter 'user'");
+        return apiClient.invokeAPI("/api/users/me", "PUT", null, user, null, IGRPUserDTO.class);
+    }
+
+    public InvitationDTO getUserInvitationByToken(String token) throws ApiException {
+        if (token == null) throw new ApiException(400, "Missing required parameter 'token'");
+        String path = "/api/users/invite/by-token/{token}".replace("{token}", token);
+        return apiClient.invokeAPI(path, "GET", null, null, null, InvitationDTO.class);
+    }
+
+    public OtpResponseDTO validateInvitationEmail(ValidateInvitationEmailRequest request) throws ApiException {
+        if (request == null) throw new ApiException(400, "Missing required parameter 'request'");
+        return apiClient.invokeAPI("/api/users/invite/validate-email", "POST", null, request, null, OtpResponseDTO.class);
+    }
+
+    public OtpResponseDTO validateInvitationOtp(ValidateInvitationOtpRequest request) throws ApiException {
+        if (request == null) throw new ApiException(400, "Missing required parameter 'request'");
+        return apiClient.invokeAPI("/api/users/invite/validate-otp", "POST", null, request, null, OtpResponseDTO.class);
+    }
+
     public boolean isSuperadmin() {
         return JwtUtil.hasSuperAdminRole(apiClient.getToken());
     }
