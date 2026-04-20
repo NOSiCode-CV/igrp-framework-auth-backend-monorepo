@@ -170,12 +170,30 @@ public class UsersApi {
         return JsonUtil.deserialize(response, new TypeReference<>() {});
     }
 
+    /**
+     * Assign roles (permanent) to a user within a department.
+     *
+     * <p>Wraps the role codes into an {@link AddRolesToUserRequestDTO} body as required
+     * by the API. For temporary role assignments with an expiration, use
+     * {@link #addRolesToUser(Integer, String, AddRolesToUserRequestDTO)} instead.</p>
+     */
     public RoleDTO addRolesToUser(Integer id, String departmentCode, List<String> roleCodes) throws ApiException {
         if (id == null || departmentCode == null || roleCodes == null) throw new ApiException(400, "Missing required parameters");
+        return addRolesToUser(id, departmentCode, new AddRolesToUserRequestDTO(roleCodes));
+    }
+
+    /**
+     * Assign roles to a user within a department, optionally with an expiration timestamp
+     * (temporary profile) in {@link AddRolesToUserRequestDTO#getExpiresAt()}.
+     */
+    public RoleDTO addRolesToUser(Integer id, String departmentCode, AddRolesToUserRequestDTO request) throws ApiException {
+        if (id == null || departmentCode == null || request == null || request.getRoles() == null) {
+            throw new ApiException(400, "Missing required parameters");
+        }
         String path = "/api/users/{id}/departments/{departmentCode}/roles"
                 .replace("{id}", id.toString())
                 .replace("{departmentCode}", departmentCode);
-        return apiClient.invokeAPI(path, "POST", null, roleCodes, null, RoleDTO.class);
+        return apiClient.invokeAPI(path, "POST", null, request, null, RoleDTO.class);
     }
 
     public RoleDTO removeRolesFromUser(Integer id, String departmentCode, List<String> roleCodes) throws ApiException {

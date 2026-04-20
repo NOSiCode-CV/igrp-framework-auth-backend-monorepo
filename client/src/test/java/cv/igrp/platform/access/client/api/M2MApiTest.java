@@ -5,6 +5,7 @@ import cv.igrp.platform.access.client.ApiException;
 import cv.igrp.platform.access.client.IApiClient;
 import cv.igrp.platform.access.client.JsonUtil;
 import cv.igrp.platform.access.client.model.ApplicationDTO;
+import cv.igrp.platform.access.client.model.MenuEntryDTO;
 import cv.igrp.platform.access.client.model.PermissionDTO;
 import cv.igrp.platform.access.client.model.ResourceDTO;
 import org.junit.jupiter.api.BeforeEach;
@@ -142,6 +143,77 @@ class M2MApiTest {
                 isNull(),
                 eq(sampleApplication),
                 eq(Map.of("X-Machine-Auth-Token", "igrp-access-m2m-sync-token-1234"))
+        );
+    }
+
+    @Test
+    void syncApplicationMenus_DefaultNoSyncRolesParam_Success() throws ApiException, IOException, InterruptedException {
+        List<MenuEntryDTO> menus = List.of(new MenuEntryDTO());
+
+        when(apiClient.invokeAPIRaw(
+                eq("/api/m2m/sync/applications/APP1/menus"),
+                eq("POST"),
+                isNull(),
+                eq(menus),
+                eq(Map.of("X-Machine-Auth-Token", "tok"))
+        )).thenReturn("");
+
+        Object result = m2mApi.syncApplicationMenus("APP1", menus, "tok", null);
+
+        assertNotNull(result);
+        verify(apiClient).invokeAPIRaw(
+                eq("/api/m2m/sync/applications/APP1/menus"),
+                eq("POST"),
+                isNull(),
+                eq(menus),
+                eq(Map.of("X-Machine-Auth-Token", "tok"))
+        );
+    }
+
+    @Test
+    void syncApplicationMenus_WithSyncRolesFalse_PassesQueryParam() throws ApiException, IOException, InterruptedException {
+        List<MenuEntryDTO> menus = List.of(new MenuEntryDTO());
+
+        when(apiClient.invokeAPIRaw(
+                eq("/api/m2m/sync/applications/APP1/menus"),
+                eq("POST"),
+                eq(Map.of("syncRoles", "false")),
+                eq(menus),
+                eq(Map.of("X-Machine-Auth-Token", "tok"))
+        )).thenReturn("");
+
+        Object result = m2mApi.syncApplicationMenus("APP1", menus, Boolean.FALSE, "tok", null);
+
+        assertNotNull(result);
+        verify(apiClient).invokeAPIRaw(
+                eq("/api/m2m/sync/applications/APP1/menus"),
+                eq("POST"),
+                eq(Map.of("syncRoles", "false")),
+                eq(menus),
+                eq(Map.of("X-Machine-Auth-Token", "tok"))
+        );
+    }
+
+    @Test
+    void syncApplicationMenus_WithSyncRolesTrue_PassesQueryParam() throws ApiException, IOException, InterruptedException {
+        List<MenuEntryDTO> menus = List.of(new MenuEntryDTO());
+
+        when(apiClient.invokeAPIRaw(
+                eq("/api/m2m/sync/applications/APP1/menus"),
+                eq("POST"),
+                eq(Map.of("syncRoles", "true")),
+                eq(menus),
+                eq(Map.of("X-Machine-Auth-Token", "tok"))
+        )).thenReturn("");
+
+        m2mApi.syncApplicationMenus("APP1", menus, Boolean.TRUE, "tok", null);
+
+        verify(apiClient).invokeAPIRaw(
+                eq("/api/m2m/sync/applications/APP1/menus"),
+                eq("POST"),
+                eq(Map.of("syncRoles", "true")),
+                eq(menus),
+                eq(Map.of("X-Machine-Auth-Token", "tok"))
         );
     }
 }

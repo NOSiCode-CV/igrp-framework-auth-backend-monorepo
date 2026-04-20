@@ -78,6 +78,21 @@ public class M2MApi {
     }
 
     public Object syncApplicationMenus(String applicationCode, List<MenuEntryDTO> menus, String m2mToken, String serviceName) throws ApiException, IOException, InterruptedException {
+        return syncApplicationMenus(applicationCode, menus, null, m2mToken, serviceName);
+    }
+
+    /**
+     * Sync application's menus.
+     *
+     * @param applicationCode target application code
+     * @param menus           the menu entries to sync
+     * @param syncRoles       when {@code false}, role associations are NOT synchronized
+     *                        (existing role bindings on each menu are preserved untouched).
+     *                        Pass {@code null} to use the server default ({@code true}).
+     * @param m2mToken        machine-to-machine auth token
+     * @param serviceName     machine-to-machine service identifier
+     */
+    public Object syncApplicationMenus(String applicationCode, List<MenuEntryDTO> menus, Boolean syncRoles, String m2mToken, String serviceName) throws ApiException, IOException, InterruptedException {
 
         Map<String, String> headers = new HashMap<>();
 
@@ -89,7 +104,13 @@ public class M2MApi {
             headers.put("X-Machine-Auth-Token", m2mToken);
         }
 
-        return apiClient.invokeAPIRaw("/api/m2m/sync/applications/%s/menus".formatted(applicationCode), "POST", null, menus, headers);
+        Map<String, String> queryParams = null;
+        if (syncRoles != null) {
+            queryParams = new HashMap<>();
+            queryParams.put("syncRoles", syncRoles.toString());
+        }
+
+        return apiClient.invokeAPIRaw("/api/m2m/sync/applications/%s/menus".formatted(applicationCode), "POST", queryParams, menus, headers);
 
     }
 

@@ -170,4 +170,50 @@ class UsersApiTest {
         verify(apiClient).invokeAPI("/api/users/invite/validate-otp", "POST", null, request, null, OtpResponseDTO.class);
     }
 
+    @Test
+    void addRolesToUser_ListOverload_WrapsIntoRequestDTO() throws ApiException {
+        List<String> codes = List.of("admin", "editor");
+        RoleDTO role = new RoleDTO();
+        when(apiClient.invokeAPI(anyString(), anyString(), any(), any(), any(), eq(RoleDTO.class)))
+                .thenReturn(role);
+
+        RoleDTO result = usersApi.addRolesToUser(7, "HR", codes);
+
+        assertNotNull(result);
+        // Body must be an AddRolesToUserRequestDTO whose roles equal the passed list
+        org.mockito.ArgumentCaptor<Object> bodyCaptor = org.mockito.ArgumentCaptor.forClass(Object.class);
+        verify(apiClient).invokeAPI(
+                eq("/api/users/7/departments/HR/roles"),
+                eq("POST"),
+                isNull(),
+                bodyCaptor.capture(),
+                isNull(),
+                eq(RoleDTO.class)
+        );
+        assertTrue(bodyCaptor.getValue() instanceof AddRolesToUserRequestDTO);
+        AddRolesToUserRequestDTO body = (AddRolesToUserRequestDTO) bodyCaptor.getValue();
+        assertEquals(codes, body.getRoles());
+        assertNull(body.getExpiresAt());
+    }
+
+    @Test
+    void addRolesToUser_RequestDTOWithExpiresAt_PassesBodyThrough() throws ApiException {
+        java.time.LocalDateTime expiresAt = java.time.LocalDateTime.of(2027, 1, 1, 0, 0);
+        AddRolesToUserRequestDTO request = new AddRolesToUserRequestDTO(List.of("viewer"), expiresAt);
+        RoleDTO role = new RoleDTO();
+        when(apiClient.invokeAPI(anyString(), anyString(), any(), any(), any(), eq(RoleDTO.class)))
+                .thenReturn(role);
+
+        usersApi.addRolesToUser(7, "HR", request);
+
+        verify(apiClient).invokeAPI(
+                eq("/api/users/7/departments/HR/roles"),
+                eq("POST"),
+                isNull(),
+                eq(request),
+                isNull(),
+                eq(RoleDTO.class)
+        );
+    }
+
 }
