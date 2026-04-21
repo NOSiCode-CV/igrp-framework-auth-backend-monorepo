@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>client</artifactId>
+    <version>0.2.0-beta.2</version>
     <name>iGRP Platform Access Management Client Java</name>
     <description>iGRP 3.0 Platform Access Management Client Java</description>
     <url>https://igrp.cv</url>
