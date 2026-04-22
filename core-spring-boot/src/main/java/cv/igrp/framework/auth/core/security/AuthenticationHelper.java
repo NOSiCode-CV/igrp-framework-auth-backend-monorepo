@@ -42,6 +42,36 @@ public class AuthenticationHelper {
         return authentication.getName();
     }
 
+    /**
+     * Retrieves the subject identifier from the current SecurityContext.
+     * <p>
+     * Supports both JWT-based authentication (standard OAuth2 users)
+     * and machine-to-machine (M2M) authentication.
+     *
+     * @return the subject (JWT "sub" claim) or client ID depending on the authentication type
+     * @throws IllegalStateException if no authentication is found
+     */
+    public String getSub() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null) {
+            throw new IllegalStateException("No authentication found in security context");
+        }
+
+        // Case 1: JWT (OAuth2 user)
+        if (authentication.getPrincipal() instanceof Jwt jwt) {
+            return jwt.getClaimAsString("sub");
+        }
+
+        // Case 2: M2M authentication (UsernamePasswordAuthenticationToken)
+        if (authentication.getPrincipal() instanceof User user) {
+            return user.getUsername();
+        }
+
+        // Case 3: Fallback (any other type)
+        return authentication.getName();
+    }
+
 
     /**
      * Retrieves the JWT token value from the security context.

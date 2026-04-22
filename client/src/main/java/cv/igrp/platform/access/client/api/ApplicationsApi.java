@@ -215,6 +215,27 @@ public class ApplicationsApi {
         });
     }
 
+    // Get applications by user
+    public List<ApplicationDTO> getApplicationsByUser(String uid) throws ApiException, IOException, InterruptedException {
+        if (uid == null || uid.isEmpty()) {
+            throw new ApiException(400, "Missing the required parameter 'uid'");
+        }
+
+        String path = "/api/applications/by-user/{uid}"
+                .replaceAll("\\{" + "uid" + "}", uid);
+
+        String response = apiClient.invokeAPIRaw(
+                path,
+                "GET",
+                null,
+                null,
+                null
+        );
+
+        return JsonUtil.deserialize(response, new TypeReference<>() {
+        });
+    }
+
     public List<MenuEntryDTO> getMenus(String appCode) throws ApiException, IOException, InterruptedException {
         if (appCode == null || appCode.isEmpty()) {
             throw new ApiException(400, "Missing the required parameter 'appCode'");
