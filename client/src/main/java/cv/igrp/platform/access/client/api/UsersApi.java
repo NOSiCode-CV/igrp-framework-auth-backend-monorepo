@@ -358,4 +358,25 @@ public class UsersApi {
         return JwtUtil.hasSuperAdminRole(apiClient.getToken());
     }
 
+    /**
+     * Fetch the free-form metadata JSON associated with a user. Used by the
+     * OAuth2 authorization server for token enrichment.
+     */
+    public UserMetadataDTO getUserMetadata(Integer id) throws ApiException {
+        if (id == null) throw new ApiException(400, "Missing required parameter 'id'");
+        String path = "/api/users/{id}/metadata".replace("{id}", id.toString());
+        return apiClient.invokeAPI(path, "GET", null, null, null, UserMetadataDTO.class);
+    }
+
+    /**
+     * Replace the user's metadata JSON. The whole map is replaced; callers
+     * that want to merge are responsible for fetching the current metadata
+     * first.
+     */
+    public UserMetadataDTO updateUserMetadata(Integer id, UpdateUserMetadataRequestDTO request) throws ApiException {
+        if (id == null || request == null) throw new ApiException(400, "Missing required parameters");
+        String path = "/api/users/{id}/metadata".replace("{id}", id.toString());
+        return apiClient.invokeAPI(path, "PUT", null, request, null, UserMetadataDTO.class);
+    }
+
 }
