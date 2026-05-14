@@ -7,7 +7,7 @@ import cv.igrp.platform.access.client.constants.Status;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class IGRPUserDTO {
     @JsonProperty("id")
-    private Integer id;
+    private String id;
 
     @JsonProperty("name")
     private String name;
@@ -28,11 +28,11 @@ public class IGRPUserDTO {
     private String signature;
 
     // Getters and Setters
-    public Integer getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(String id) {
         this.id = id;
     }
 

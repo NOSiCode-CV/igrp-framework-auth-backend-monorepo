@@ -14,13 +14,13 @@ import java.util.Map;
 public class UserMetadataDTO {
 
     @JsonProperty("userId")
-    private Integer userId;
+    private String userId;
 
     @JsonProperty("metadata")
     private Map<String, Object> metadata = new LinkedHashMap<>();
 
-    public Integer getUserId() { return userId; }
-    public void setUserId(Integer userId) { this.userId = userId; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
 
     public Map<String, Object> getMetadata() { return metadata; }
     public void setMetadata(Map<String, Object> metadata) { this.metadata = metadata; }

@@ -28,60 +28,16 @@ public class UsersApi {
         this.apiClient = apiClient;
     }
 
-    // Existing username-based endpoints (kept for backward compatibility)
-    public IGRPUserDTO getUser(String username) throws ApiException {
-        if (username == null) {
-            throw new ApiException(400, "Missing required parameter 'username'");
-        }
-        String path = "/api/users/{username}".replaceAll("\\{" + "username" + "}", username);
-        return apiClient.invokeAPI(path, "GET", null, null, null, IGRPUserDTO.class);
-    }
-
-    public IGRPUserDTO updateUser(String username, IGRPUserDTO userDTO) throws ApiException {
-        if (username == null || userDTO == null) {
-            throw new ApiException(400, "Missing required parameters");
-        }
-        String path = "/api/users/{username}".replaceAll("\\{" + "username" + "}", username);
-        return apiClient.invokeAPI(path, "PUT", null, userDTO, null, IGRPUserDTO.class);
-    }
+    // NOTE: Phase G2 made the user id a String UUID. The previous username-based
+    // overloads of getUser/updateUser/getUserRoles/addRolesToUser/removeRolesFromUser
+    // were dropped because their signatures collided with the new String-id
+    // overloads. Callers should migrate to the id-based variants below.
 
     public IGRPUserDTO createUser(IGRPUserDTO userDTO) throws ApiException {
         if (userDTO == null) {
             throw new ApiException(400, "Missing required parameter 'userDTO'");
         }
         return apiClient.invokeAPI("/api/users", "POST", null, userDTO, null, IGRPUserDTO.class);
-    }
-
-    public IGRPUserDTO inviteUser(IGRPUserDTO userDTO) throws ApiException {
-        if (userDTO == null) {
-            throw new ApiException(400, "Missing required parameter 'userDTO'");
-        }
-        return apiClient.invokeAPI("/api/users/invite", "POST", null, userDTO, null, IGRPUserDTO.class);
-    }
-
-    public RoleDTO addRolesToUser(String username, List<String> roleNames) throws ApiException {
-        if (username == null || roleNames == null) {
-            throw new ApiException(400, "Missing required parameters");
-        }
-        String path = "/api/users/{username}/roles".replaceAll("\\{" + "username" + "}", username);
-        return apiClient.invokeAPI(path, "POST", null, roleNames, null, RoleDTO.class);
-    }
-
-    public RoleDTO removeRolesFromUser(String username, List<String> roleNames) throws ApiException {
-        if (username == null || roleNames == null) {
-            throw new ApiException(400, "Missing required parameters");
-        }
-        String path = "/api/users/{username}/roles".replaceAll("\\{" + "username" + "}", username);
-        return apiClient.invokeAPI(path, "DELETE", null, roleNames, null, RoleDTO.class);
-    }
-
-    public List<RoleDTO> getUserRoles(String username) throws ApiException, IOException, InterruptedException {
-        if (username == null) {
-            throw new ApiException(400, "Missing required parameter: 'username'");
-        }
-        String path = "/api/users/{username}/roles".replaceAll("\\{" + "username" + "}", username);
-        String response = apiClient.invokeAPIRaw(path, "GET", null, null, null);
-        return JsonUtil.deserialize(response, new TypeReference<>() {});
     }
 
     public List<IGRPUserDTO> getUsers(String applicationCode, String departmentCode, String name, String email) throws ApiException, IOException, InterruptedException {
@@ -94,22 +50,22 @@ public class UsersApi {
         return JsonUtil.deserialize(response, new TypeReference<>() {});
     }
 
-    // ID-based endpoints
-    public IGRPUserDTO getUser(Integer id) throws ApiException {
+    // ID-based endpoints (Phase G2: user id is String UUID)
+    public IGRPUserDTO getUser(String id) throws ApiException {
         if (id == null) throw new ApiException(400, "Missing required parameter 'id'");
-        String path = "/api/users/{id}".replace("{id}", id.toString());
+        String path = "/api/users/{id}".replace("{id}", id);
         return apiClient.invokeAPI(path, "GET", null, null, null, IGRPUserDTO.class);
     }
 
-    public IGRPUserDTO updateUser(Integer id, IGRPUserDTO user) throws ApiException {
+    public IGRPUserDTO updateUser(String id, IGRPUserDTO user) throws ApiException {
         if (id == null || user == null) throw new ApiException(400, "Missing required parameters");
-        String path = "/api/users/{id}".replace("{id}", id.toString());
+        String path = "/api/users/{id}".replace("{id}", id);
         return apiClient.invokeAPI(path, "PUT", null, user, null, IGRPUserDTO.class);
     }
 
-    public IGRPUserDTO updateUserStatus(Integer id, String value) throws ApiException {
+    public IGRPUserDTO updateUserStatus(String id, String value) throws ApiException {
         if (id == null || value == null) throw new ApiException(400, "Missing required parameters");
-        String path = "/api/users/{id}/status".replace("{id}", id.toString());
+        String path = "/api/users/{id}/status".replace("{id}", id);
         Map<String, String> query = new HashMap<>();
         query.put("value", value);
         return apiClient.invokeAPI(path + "?value=" + value, "PUT", null, null, null, IGRPUserDTO.class);
@@ -156,16 +112,16 @@ public class UsersApi {
     }
 
     // Roles by user id & department
-    public List<RoleDTO> getUserRoles(Integer id) throws ApiException, IOException, InterruptedException {
+    public List<RoleDTO> getUserRoles(String id) throws ApiException, IOException, InterruptedException {
         if (id == null) throw new ApiException(400, "Missing required parameter 'id'");
-        String path = "/api/users/{id}/roles".replace("{id}", id.toString());
+        String path = "/api/users/{id}/roles".replace("{id}", id);
         String response = apiClient.invokeAPIRaw(path, "GET", null, null, null);
         return JsonUtil.deserialize(response, new TypeReference<>() {});
     }
 
-    public List<PermissionDTO> getUserPermissions(Integer id) throws ApiException, IOException, InterruptedException {
+    public List<PermissionDTO> getUserPermissions(String id) throws ApiException, IOException, InterruptedException {
         if (id == null) throw new ApiException(400, "Missing required parameter 'id'");
-        String path = "/api/users/{id}/permissions".replace("{id}", id.toString());
+        String path = "/api/users/{id}/permissions".replace("{id}", id);
         String response = apiClient.invokeAPIRaw(path, "GET", null, null, null);
         return JsonUtil.deserialize(response, new TypeReference<>() {});
     }
@@ -175,9 +131,9 @@ public class UsersApi {
      *
      * <p>Wraps the role codes into an {@link AddRolesToUserRequestDTO} body as required
      * by the API. For temporary role assignments with an expiration, use
-     * {@link #addRolesToUser(Integer, String, AddRolesToUserRequestDTO)} instead.</p>
+     * {@link #addRolesToUser(String, String, AddRolesToUserRequestDTO)} instead.</p>
      */
-    public RoleDTO addRolesToUser(Integer id, String departmentCode, List<String> roleCodes) throws ApiException {
+    public RoleDTO addRolesToUser(String id, String departmentCode, List<String> roleCodes) throws ApiException {
         if (id == null || departmentCode == null || roleCodes == null) throw new ApiException(400, "Missing required parameters");
         return addRolesToUser(id, departmentCode, new AddRolesToUserRequestDTO(roleCodes));
     }
@@ -186,20 +142,20 @@ public class UsersApi {
      * Assign roles to a user within a department, optionally with an expiration timestamp
      * (temporary profile) in {@link AddRolesToUserRequestDTO#getExpiresAt()}.
      */
-    public RoleDTO addRolesToUser(Integer id, String departmentCode, AddRolesToUserRequestDTO request) throws ApiException {
+    public RoleDTO addRolesToUser(String id, String departmentCode, AddRolesToUserRequestDTO request) throws ApiException {
         if (id == null || departmentCode == null || request == null || request.getRoles() == null) {
             throw new ApiException(400, "Missing required parameters");
         }
         String path = "/api/users/{id}/departments/{departmentCode}/roles"
-                .replace("{id}", id.toString())
+                .replace("{id}", id)
                 .replace("{departmentCode}", departmentCode);
         return apiClient.invokeAPI(path, "POST", null, request, null, RoleDTO.class);
     }
 
-    public RoleDTO removeRolesFromUser(Integer id, String departmentCode, List<String> roleCodes) throws ApiException {
+    public RoleDTO removeRolesFromUser(String id, String departmentCode, List<String> roleCodes) throws ApiException {
         if (id == null || departmentCode == null || roleCodes == null) throw new ApiException(400, "Missing required parameters");
         String path = "/api/users/{id}/departments/{departmentCode}/roles"
-                .replace("{id}", id.toString())
+                .replace("{id}", id)
                 .replace("{departmentCode}", departmentCode);
         return apiClient.invokeAPI(path, "DELETE", null, roleCodes, null, RoleDTO.class);
     }
@@ -212,15 +168,15 @@ public class UsersApi {
         return apiClient.invokeAPI("/api/users/me/roles/active", "GET", null, null, null, RoleDepartmentDTO.class);
     }
 
-    public RoleDepartmentDTO getUserActiveRole(Integer id) throws ApiException {
+    public RoleDepartmentDTO getUserActiveRole(String id) throws ApiException {
         if (id == null) throw new ApiException(400, "Missing required parameter 'id'");
-        String path = "/api/users/{id}/roles/active".replace("{id}", id.toString());
+        String path = "/api/users/{id}/roles/active".replace("{id}", id);
         return apiClient.invokeAPI(path, "GET", null, null, null, RoleDepartmentDTO.class);
     }
 
-    public RoleDepartmentDTO setUserActiveRole(RoleDepartmentDTO body, Integer id) throws ApiException {
+    public RoleDepartmentDTO setUserActiveRole(RoleDepartmentDTO body, String id) throws ApiException {
         if (id == null || body == null) throw new ApiException(400, "Missing required parameters");
-        String path = "/api/users/{id}/roles/active".replace("{id}", id.toString());
+        String path = "/api/users/{id}/roles/active".replace("{id}", id);
         return apiClient.invokeAPI(path, "POST", null, body, null, RoleDepartmentDTO.class);
     }
 
@@ -235,9 +191,9 @@ public class UsersApi {
         return JsonUtil.deserialize(response, new TypeReference<>() {});
     }
 
-    public List<DepartmentDTO> getUserDepartments(Integer id) throws ApiException, IOException, InterruptedException {
+    public List<DepartmentDTO> getUserDepartments(String id) throws ApiException, IOException, InterruptedException {
         if (id == null) throw new ApiException(400, "Missing required parameter 'id'");
-        String path = "/api/users/{id}/departments".replace("{id}", id.toString());
+        String path = "/api/users/{id}/departments".replace("{id}", id);
         String response = apiClient.invokeAPIRaw(path, "GET", null, null, null);
         return JsonUtil.deserialize(response, new TypeReference<>() {});
     }
@@ -249,10 +205,10 @@ public class UsersApi {
         return JsonUtil.deserialize(response, new TypeReference<>() {});
     }
 
-    public List<RoleUserDTO> getUserDepartmentRoles(Integer id, String departmentCode) throws ApiException, IOException, InterruptedException {
+    public List<RoleUserDTO> getUserDepartmentRoles(String id, String departmentCode) throws ApiException, IOException, InterruptedException {
         if (id == null || departmentCode == null) throw new ApiException(400, "Missing required parameters");
         String path = "/api/users/{id}/departments/{departmentCode}/roles"
-                .replace("{id}", id.toString())
+                .replace("{id}", id)
                 .replace("{departmentCode}", departmentCode);
         String response = apiClient.invokeAPIRaw(path, "GET", null, null, null);
         return JsonUtil.deserialize(response, new TypeReference<>() {});
@@ -310,9 +266,9 @@ public class UsersApi {
         return apiClient.invokeAPI(path, "DELETE", null, null, null, ApplicationDTO.class);
     }
 
-    public List<ApplicationDTO> getUserApplications(Integer id) throws ApiException, IOException, InterruptedException {
+    public List<ApplicationDTO> getUserApplications(String id) throws ApiException, IOException, InterruptedException {
         if (id == null) throw new ApiException(400, "Missing required parameter 'id'");
-        String path = "/api/users/{id}/applications".replace("{id}", id.toString());
+        String path = "/api/users/{id}/applications".replace("{id}", id);
         String response = apiClient.invokeAPIRaw(path, "GET", null, null, null);
         return JsonUtil.deserialize(response, new TypeReference<>() {});
     }
@@ -324,10 +280,10 @@ public class UsersApi {
         return JsonUtil.deserialize(response, new TypeReference<>() {});
     }
 
-    public List<MenuEntryDTO> getUserApplicationMenus(Integer id, String applicationCode) throws ApiException, IOException, InterruptedException {
+    public List<MenuEntryDTO> getUserApplicationMenus(String id, String applicationCode) throws ApiException, IOException, InterruptedException {
         if (id == null || applicationCode == null) throw new ApiException(400, "Missing required parameters");
         String path = "/api/users/{id}/applications/{applicationCode}/menus"
-                .replace("{id}", id.toString())
+                .replace("{id}", id)
                 .replace("{applicationCode}", applicationCode);
         String response = apiClient.invokeAPIRaw(path, "GET", null, null, null);
         return JsonUtil.deserialize(response, new TypeReference<>() {});
@@ -362,9 +318,9 @@ public class UsersApi {
      * Fetch the free-form metadata JSON associated with a user. Used by the
      * OAuth2 authorization server for token enrichment.
      */
-    public UserMetadataDTO getUserMetadata(Integer id) throws ApiException {
+    public UserMetadataDTO getUserMetadata(String id) throws ApiException {
         if (id == null) throw new ApiException(400, "Missing required parameter 'id'");
-        String path = "/api/users/{id}/metadata".replace("{id}", id.toString());
+        String path = "/api/users/{id}/metadata".replace("{id}", id);
         return apiClient.invokeAPI(path, "GET", null, null, null, UserMetadataDTO.class);
     }
 
@@ -373,9 +329,9 @@ public class UsersApi {
      * that want to merge are responsible for fetching the current metadata
      * first.
      */
-    public UserMetadataDTO updateUserMetadata(Integer id, UpdateUserMetadataRequestDTO request) throws ApiException {
+    public UserMetadataDTO updateUserMetadata(String id, UpdateUserMetadataRequestDTO request) throws ApiException {
         if (id == null || request == null) throw new ApiException(400, "Missing required parameters");
-        String path = "/api/users/{id}/metadata".replace("{id}", id.toString());
+        String path = "/api/users/{id}/metadata".replace("{id}", id);
         return apiClient.invokeAPI(path, "PUT", null, request, null, UserMetadataDTO.class);
     }
 
