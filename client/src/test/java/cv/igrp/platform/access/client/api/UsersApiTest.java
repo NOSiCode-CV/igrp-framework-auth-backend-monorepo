@@ -32,7 +32,7 @@ class UsersApiTest {
     void setUp() {
         usersApi = new UsersApi(apiClient);
 
-        sampleUser.setId(601);
+        sampleUser.setId("00000000-0000-0000-0000-000000000601");
         sampleUser.setUsername("john.doe");
         sampleUser.setName("John Doe");
         sampleUser.setEmail("john@example.com");
@@ -46,7 +46,7 @@ class UsersApiTest {
         when(apiClient.invokeAPI(anyString(), eq("GET"), isNull(), isNull(), isNull(), eq(IGRPUserDTO.class)))
                 .thenReturn(sampleUser);
 
-        IGRPUserDTO result = usersApi.getUser("john.doe");
+        IGRPUserDTO result = usersApi.getUser("00000000-0000-0000-0000-000000000601");
         assertEquals("John Doe", result.getName());
     }
 
@@ -73,16 +73,16 @@ class UsersApiTest {
         RoleDTO role = new RoleDTO();
         role.setId(701);
         role.setName("admin");
-        when(apiClient.invokeAPI(anyString(), eq("POST"), isNull(), any(List.class), isNull(), eq(RoleDTO.class)))
+        when(apiClient.invokeAPI(anyString(), eq("POST"), isNull(), any(AddRolesToUserRequestDTO.class), isNull(), eq(RoleDTO.class)))
                 .thenReturn(role);
 
-        RoleDTO result = usersApi.addRolesToUser("john.doe", List.of("admin"));
+        RoleDTO result = usersApi.addRolesToUser("00000000-0000-0000-0000-000000000601", "HR", List.of("admin"));
         assertEquals(701, result.getId());
     }
 
     @Test
     void getUsers_Success() throws ApiException, IOException, InterruptedException {
-        String jsonResponse = "[{\"id\":601,\"name\":\"User1\"},{\"id\":602,\"name\":\"User2\"}]";
+        String jsonResponse = "[{\"id\":\"uuid-601\",\"name\":\"User1\"},{\"id\":\"uuid-602\",\"name\":\"User2\"}]";
 
         Map<String, String> expectedParams = Map.of(
                 "departmentCode", "HR",
@@ -104,8 +104,8 @@ class UsersApiTest {
         );
 
         assertEquals(2, result.size());
-        assertEquals(601, result.get(0).getId());
-        assertEquals(602, result.get(1).getId());
+        assertEquals("uuid-601", result.get(0).getId());
+        assertEquals("uuid-602", result.get(1).getId());
     }
 
     /*@Test
@@ -177,13 +177,13 @@ class UsersApiTest {
         when(apiClient.invokeAPI(anyString(), anyString(), any(), any(), any(), eq(RoleDTO.class)))
                 .thenReturn(role);
 
-        RoleDTO result = usersApi.addRolesToUser(7, "HR", codes);
+        RoleDTO result = usersApi.addRolesToUser("uuid-7", "HR", codes);
 
         assertNotNull(result);
         // Body must be an AddRolesToUserRequestDTO whose roles equal the passed list
         org.mockito.ArgumentCaptor<Object> bodyCaptor = org.mockito.ArgumentCaptor.forClass(Object.class);
         verify(apiClient).invokeAPI(
-                eq("/api/users/7/departments/HR/roles"),
+                eq("/api/users/uuid-7/departments/HR/roles"),
                 eq("POST"),
                 isNull(),
                 bodyCaptor.capture(),
@@ -204,10 +204,10 @@ class UsersApiTest {
         when(apiClient.invokeAPI(anyString(), anyString(), any(), any(), any(), eq(RoleDTO.class)))
                 .thenReturn(role);
 
-        usersApi.addRolesToUser(7, "HR", request);
+        usersApi.addRolesToUser("uuid-7", "HR", request);
 
         verify(apiClient).invokeAPI(
-                eq("/api/users/7/departments/HR/roles"),
+                eq("/api/users/uuid-7/departments/HR/roles"),
                 eq("POST"),
                 isNull(),
                 eq(request),
