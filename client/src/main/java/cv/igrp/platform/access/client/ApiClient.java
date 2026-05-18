@@ -1,5 +1,7 @@
 package cv.igrp.platform.access.client;
 
+import cv.igrp.platform.access.client.errors.ProblemDetail;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -36,7 +38,7 @@ public class ApiClient implements IApiClient {
             if (statusCode >= 200 && statusCode < 300) {
                 return JsonUtil.deserialize(response.body(), returnType);
             } else {
-                throw new ApiException(statusCode, "API Error: " + response.body());
+                throw buildApiException(response);
             }
         } catch (IOException | InterruptedException e) {
             throw new ApiException(e);
@@ -51,8 +53,39 @@ public class ApiClient implements IApiClient {
         if (statusCode >= 200 && statusCode < 300) {
             return response.body(); // Already string
         } else {
-            throw new ApiException(statusCode, "API Error: " + response.body());
+            throw buildApiException(response);
         }
+    }
+
+    /**
+     * Parse the response body as an RFC-7807 {@link ProblemDetail} (the shape
+     * the Access Management API's {@code GlobalExceptionHandler} returns on
+     * every error) and wrap the result in a rich {@link ApiException}.
+     * Falls back to the legacy "raw body in message" shape when the response
+     * is not parseable (e.g. plain-text 502 from a reverse proxy ahead of
+     * the API).
+     */
+    private static ApiException buildApiException(HttpResponse<String> response) {
+        int statusCode = response.statusCode();
+        String body = response.body();
+        if (body == null || body.isBlank()) {
+            return new ApiException(statusCode, "API Error: status=" + statusCode);
+        }
+        // The API always returns problem+json or application/json on error.
+        // Anything else (plain text, html) → legacy fallback.
+        String contentType = response.headers().firstValue("Content-Type").orElse("");
+        boolean looksJson = contentType.contains("json") || body.trim().startsWith("{");
+        if (looksJson) {
+            try {
+                ProblemDetail pd = JsonUtil.deserialize(body, ProblemDetail.class);
+                if (pd != null) {
+                    return new ApiException(statusCode, pd);
+                }
+            } catch (Exception ignored) {
+                // Fall through to legacy shape (any parse / Jackson failure).
+            }
+        }
+        return new ApiException(statusCode, "API Error: " + body);
     }
 
     private HttpResponse<String> getStringHttpResponse(String path, String method, Map<String, String> queryParams,
