@@ -7,12 +7,12 @@
     <parent>
         <groupId>cv.igrp.framework.auth</groupId>
         <artifactId>backend</artifactId>
-        <version>0.2.0-beta.3</version>
+        <version>0.2.0-beta.4</version>
     </parent>
 
     <groupId>cv.igrp.platform.access</groupId>
     <artifactId>client</artifactId>
-    <version>0.2.0-beta.5</version>
+    <version>0.2.0-beta.6</version>
     <name>iGRP Platform Access Management Client Java</name>
     <description>iGRP 3.0 Platform Access Management Client Java</description>
     <url>https://igrp.cv</url>

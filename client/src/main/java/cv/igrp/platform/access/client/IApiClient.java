@@ -1,5 +1,7 @@
 package cv.igrp.platform.access.client;
 
+import cv.igrp.platform.access.client.auth.ClientCredentialsTokenProvider;
+
 import java.io.IOException;
 import java.util.Map;
 
@@ -20,4 +22,14 @@ public interface IApiClient {
 
     String getToken();
 
+    /**
+     * @return the OAuth2 {@code client_credentials} token provider configured
+     *         on this client (typically via
+     *         {@code ApiClient.setClientCredentials(...)}), or {@code null}
+     *         when no client credentials are configured. M2M-aware API
+     *         classes use this to fetch a Bearer token transparently.
+     */
+    default ClientCredentialsTokenProvider getClientCredentialsTokenProvider() {
+        return null;
+    }
 }

@@ -1,5 +1,6 @@
 package cv.igrp.platform.access.client;
 
+import cv.igrp.platform.access.client.auth.ClientCredentialsTokenProvider;
 import cv.igrp.platform.access.client.errors.ProblemDetail;
 
 import java.io.IOException;
@@ -16,6 +17,7 @@ public class ApiClient implements IApiClient {
     // [marcelo.monteiro - 2025-06-26 11:52:04] TODO: Get these default data from properties
     private String baseUrl = "http://localhost:8081"; // TODO: read from properties
     private String authToken;
+    private ClientCredentialsTokenProvider clientCredentialsTokenProvider;
     private final int timeout = 30;
 
     public ApiClient() {
@@ -140,4 +142,40 @@ public class ApiClient implements IApiClient {
     public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
     public String getAuthToken() { return authToken; }
     public void setAuthToken(String authToken) { this.authToken = authToken; }
+
+    /**
+     * Configure OAuth2 {@code client_credentials} authentication. After this
+     * call, every API invocation that asks for an automatic Bearer (e.g.
+     * the M2M sync endpoints via {@code M2MApi}) will fetch and cache a
+     * token from {@code {baseUrl}/oauth2/token} using the supplied
+     * client credentials. The token is reused across calls and refreshed
+     * transparently before expiry.
+     *
+     * <p>Centralises what used to be a per-call static M2M header — callers
+     * now provide their (clientId, clientSecret) once and the rest is
+     * handled by the client library.
+     */
+    public void setClientCredentials(String clientId, String clientSecret) {
+        this.clientCredentialsTokenProvider = new ClientCredentialsTokenProvider(
+                baseUrl, clientId, clientSecret);
+    }
+
+    /**
+     * Variant accepting a scope (e.g. {@code "m2m"}) when the OAuth2 client
+     * registration constrains scopes.
+     */
+    public void setClientCredentials(String clientId, String clientSecret, String scope) {
+        this.clientCredentialsTokenProvider = new ClientCredentialsTokenProvider(
+                baseUrl, clientId, clientSecret, scope, 30);
+    }
+
+    /**
+     * @return the configured token provider, or {@code null} when no client
+     *         credentials have been set. M2M-aware API classes use this to
+     *         decide whether to inject {@code Authorization: Bearer} on
+     *         their calls.
+     */
+    public ClientCredentialsTokenProvider getClientCredentialsTokenProvider() {
+        return clientCredentialsTokenProvider;
+    }
 }
