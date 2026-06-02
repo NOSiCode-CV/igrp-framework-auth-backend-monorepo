@@ -2,6 +2,7 @@ package cv.igrp.platform.access.client.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import cv.igrp.platform.access.client.constants.IdentifierType;
 import cv.igrp.platform.access.client.constants.InvitationStatus;
 
 import java.util.List;
@@ -20,7 +21,7 @@ public class InvitationDTO {
      * getIdentifierType() / getIdentifierValue()} and branch on type.
      */
     @JsonProperty("identifierType")
-    private String identifierType;
+    private IdentifierType identifierType;
 
     @JsonProperty("identifierValue")
     private String identifierValue;
@@ -57,11 +58,11 @@ public class InvitationDTO {
         this.id = id;
     }
 
-    public String getIdentifierType() {
+    public IdentifierType getIdentifierType() {
         return identifierType;
     }
 
-    public void setIdentifierType(String identifierType) {
+    public void setIdentifierType(IdentifierType identifierType) {
         this.identifierType = identifierType;
     }
 
