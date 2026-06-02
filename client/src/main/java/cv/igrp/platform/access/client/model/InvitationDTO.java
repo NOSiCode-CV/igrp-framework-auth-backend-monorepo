@@ -11,14 +11,22 @@ public class InvitationDTO {
     @JsonProperty("id")
     private Integer id;
 
-    @JsonProperty("email")
-    private String email;
+    /**
+     * Phase G2 / multi-identifier — the API surfaces the invited principal
+     * as a (type, value) pair rather than a hard-coded email field, so the
+     * same invitation flow handles EMAIL, PHONE and CNI identifiers
+     * uniformly. Backwards-incompatible with the pre-G2 client; callers
+     * that previously read {@code getEmail()} now read {@code
+     * getIdentifierType() / getIdentifierValue()} and branch on type.
+     */
+    @JsonProperty("identifierType")
+    private String identifierType;
+
+    @JsonProperty("identifierValue")
+    private String identifierValue;
 
     @JsonProperty("status")
     private InvitationStatus status;
-
-    @JsonProperty("token")
-    private String token;
 
     @JsonProperty("expiry")
     private String expiry;
@@ -49,12 +57,20 @@ public class InvitationDTO {
         this.id = id;
     }
 
-    public String getEmail() {
-        return email;
+    public String getIdentifierType() {
+        return identifierType;
     }
 
-    public void setEmail(String email) {
-        this.email = email;
+    public void setIdentifierType(String identifierType) {
+        this.identifierType = identifierType;
+    }
+
+    public String getIdentifierValue() {
+        return identifierValue;
+    }
+
+    public void setIdentifierValue(String identifierValue) {
+        this.identifierValue = identifierValue;
     }
 
     public InvitationStatus getStatus() {
@@ -63,14 +79,6 @@ public class InvitationDTO {
 
     public void setStatus(InvitationStatus status) {
         this.status = status;
-    }
-
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
     }
 
     public String getExpiry() {
