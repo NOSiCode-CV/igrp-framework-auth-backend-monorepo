@@ -6,7 +6,7 @@
 
     <groupId>cv.igrp.framework.auth</groupId>
     <artifactId>backend</artifactId>
-    <version>0.2.0-beta.4</version>
+    <version>0.2.0-beta.5</version>
     <packaging>pom</packaging>
 
     <name>iGRP Framework Auth Backend</name>
@@ -24,7 +24,7 @@
     </modules>
 
     <properties>
-        <java.version>21</java.version>
+        <java.version>26</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <igrp.encoding>UTF-8</igrp.encoding>
