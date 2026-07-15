@@ -7,12 +7,12 @@
     <parent>
         <groupId>cv.igrp.framework.auth</groupId>
         <artifactId>backend</artifactId>
-        <version>0.2.0-beta.5</version>
+        <version>0.2.0-beta.6</version>
     </parent>
 
     <groupId>cv.igrp.platform.access</groupId>
     <artifactId>client</artifactId>
-    <version>0.2.0-beta.10</version>
+    <version>0.2.0-beta.11</version>
     <name>iGRP Platform Access Management Client Java</name>
     <description>iGRP 3.0 Platform Access Management Client Java</description>
     <url>https://igrp.cv</url>
@@ -90,6 +90,20 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <!-- Mockito's inline mock maker (ByteBuddy) does not yet
+                         recognise JDK 26 as a supported target; the experimental
+                         switch lets it instrument regardless. Required for every
+                         Mockito-based test in this module to run on Java 26. -->
+                    <systemPropertyVariables>
+                        <net.bytebuddy.experimental>true</net.bytebuddy.experimental>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
             <plugin>

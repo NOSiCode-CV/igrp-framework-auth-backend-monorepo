@@ -4,10 +4,12 @@ import cv.igrp.platform.access.client.auth.ClientCredentialsTokenProvider;
 import cv.igrp.platform.access.client.errors.ProblemDetail;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 
@@ -56,6 +58,65 @@ public class ApiClient implements IApiClient {
             return response.body(); // Already string
         } else {
             throw buildApiException(response);
+        }
+    }
+
+    @Override
+    public InputStream invokeAPIStream(String path, String method, Map<String, String> queryParams,
+                                       Map<String, String> headerParams) throws ApiException {
+        try {
+            StringBuilder uriBuilder = new StringBuilder(baseUrl + path);
+            if (queryParams != null && !queryParams.isEmpty()) {
+                uriBuilder.append("?");
+                queryParams.forEach((k, v) -> uriBuilder.append(k).append("=").append(v).append("&"));
+                uriBuilder.deleteCharAt(uriBuilder.length() - 1);
+            }
+
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
+                    .uri(URI.create(uriBuilder.toString()))
+                    // Binary exports negotiate their own content type; accept anything.
+                    .header("Accept", "*/*");
+
+            if (authToken != null) {
+                builder.header("Authorization", "Bearer " + authToken);
+            }
+            if (headerParams != null) {
+                headerParams.forEach(builder::header);
+            }
+
+            switch (method) {
+                case "GET" -> builder.GET();
+                case "POST" -> builder.POST(HttpRequest.BodyPublishers.noBody());
+                default -> throw new ApiException(415, "Unsupported method for stream: " + method);
+            }
+
+            HttpResponse<InputStream> response = httpClient.send(
+                    builder.build(), HttpResponse.BodyHandlers.ofInputStream());
+            int statusCode = response.statusCode();
+            if (statusCode >= 200 && statusCode < 300) {
+                return response.body();
+            }
+            // Drain the error stream so we can surface a meaningful message.
+            String errorBody;
+            try (InputStream err = response.body()) {
+                errorBody = err == null ? "" : new String(err.readAllBytes(), StandardCharsets.UTF_8);
+            }
+            String contentType = response.headers().firstValue("Content-Type").orElse("");
+            if ((contentType.contains("json") || errorBody.trim().startsWith("{"))) {
+                try {
+                    ProblemDetail pd = JsonUtil.deserialize(errorBody, ProblemDetail.class);
+                    if (pd != null) {
+                        throw new ApiException(statusCode, pd);
+                    }
+                } catch (IOException ignored) {
+                    // Fall through to the plain-body shape.
+                }
+            }
+            throw new ApiException(statusCode, errorBody.isBlank()
+                    ? "API Error: status=" + statusCode
+                    : "API Error: " + errorBody);
+        } catch (IOException | InterruptedException e) {
+            throw new ApiException(e);
         }
     }
 
