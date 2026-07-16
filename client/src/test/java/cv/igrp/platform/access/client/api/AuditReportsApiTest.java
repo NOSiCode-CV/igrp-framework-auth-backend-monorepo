@@ -4,8 +4,11 @@ import cv.igrp.platform.access.client.ApiException;
 import cv.igrp.platform.access.client.IApiClient;
 import cv.igrp.platform.access.client.model.PageResponse;
 import cv.igrp.platform.access.client.model.reports.AccessReportRowDTO;
+import cv.igrp.platform.access.client.model.reports.AuditReportFileDTO;
 import cv.igrp.platform.access.client.model.reports.AuditReportRowDTO;
 import cv.igrp.platform.access.client.model.reports.AuditStatus;
+import cv.igrp.platform.access.client.model.reports.ReportFormat;
+import cv.igrp.platform.access.client.model.reports.ReportType;
 import cv.igrp.platform.access.client.model.reports.SettingsArea;
 import cv.igrp.platform.access.client.model.reports.SettingsReportRowDTO;
 import org.junit.jupiter.api.BeforeEach;
@@ -176,5 +179,137 @@ class AuditReportsApiTest {
         assertThrows(ApiException.class, () -> api.getAccessReportPdf(
                 null, END, null, null, null, null, null));
         verifyNoInteractions(apiClient);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void getAuditReportCsv_streamsFromCsvEndpointWithoutPaging() throws ApiException, IOException {
+        byte[] payload = "﻿ID,Start Date\r\n".getBytes(StandardCharsets.UTF_8);
+        when(apiClient.invokeAPIStream(eq("/api/auth/reports/audit.csv"), eq("GET"), anyMap(), isNull()))
+                .thenReturn(new ByteArrayInputStream(payload));
+
+        try (InputStream in = api.getAuditReportCsv(
+                START, END, "alice", null, null, null, null, null)) {
+            assertArrayEquals(payload, in.readAllBytes());
+        }
+
+        ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+        verify(apiClient).invokeAPIStream(eq("/api/auth/reports/audit.csv"), eq("GET"), captor.capture(), isNull());
+        Map<String, String> q = captor.getValue();
+        assertEquals("alice", q.get("username"));
+        assertFalse(q.containsKey("page"), "exports must not carry pagination");
+    }
+
+    @Test
+    void accessAndSettingsCsv_hitTheirOwnEndpoints() throws ApiException, IOException {
+        when(apiClient.invokeAPIStream(anyString(), eq("GET"), anyMap(), isNull()))
+                .thenReturn(new ByteArrayInputStream(new byte[0]));
+
+        api.getAccessReportCsv(START, END, null, null, null, null, null).close();
+        api.getSettingsReportCsv(START, END, null, null, null, null, null).close();
+
+        verify(apiClient).invokeAPIStream(eq("/api/auth/reports/access.csv"), eq("GET"), anyMap(), isNull());
+        verify(apiClient).invokeAPIStream(eq("/api/auth/reports/settings.csv"), eq("GET"), anyMap(), isNull());
+    }
+
+    // -------------------------------------------------------------- Archive
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void archiveAuditReport_postsFormatWithFiltersAndReturnsTheRecord() throws ApiException {
+        AuditReportFileDTO stored = new AuditReportFileDTO();
+        stored.setId("f1");
+        stored.setReportType(ReportType.AUDIT);
+        stored.setFormat(ReportFormat.XLSX);
+        stored.setFilePath("private/audit-reports/alice/uuid_audit-report-2026-07-16.xlsx");
+        stored.setRowCount(42L);
+        when(apiClient.invokeAPI(eq("/api/auth/reports/audit/archive"), eq("POST"), anyMap(), isNull(), isNull(),
+                eq(AuditReportFileDTO.class))).thenReturn(stored);
+
+        AuditReportFileDTO result = api.archiveAuditReport(
+                ReportFormat.XLSX, START, END, "alice", null, null, null, null, null);
+
+        assertEquals("f1", result.getId());
+        assertEquals(ReportFormat.XLSX, result.getFormat());
+        // filePath is the handle the caller feeds to FilesApi.getPrivateFilesUrl(...)
+        assertTrue(result.getFilePath().startsWith("private/audit-reports/"));
+        assertEquals(42L, result.getRowCount());
+
+        ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+        verify(apiClient).invokeAPI(eq("/api/auth/reports/audit/archive"), eq("POST"), captor.capture(),
+                isNull(), isNull(), eq(AuditReportFileDTO.class));
+        Map<String, String> q = captor.getValue();
+        assertEquals("XLSX", q.get("format"));
+        assertEquals("2026-07-01T00:00:00Z", q.get("startDate"));
+        assertEquals("alice", q.get("username"));
+        assertFalse(q.containsKey("page"), "archive must not carry pagination");
+    }
+
+    @Test
+    void archiveAccessAndSettings_hitTheirOwnEndpoints() throws ApiException {
+        when(apiClient.invokeAPI(anyString(), eq("POST"), anyMap(), isNull(), isNull(),
+                eq(AuditReportFileDTO.class))).thenReturn(new AuditReportFileDTO());
+
+        api.archiveAccessReport(ReportFormat.CSV, START, END, null, null, null, null, null);
+        api.archiveSettingsReport(ReportFormat.PDF, START, END, null, null, null, null, null);
+
+        verify(apiClient).invokeAPI(eq("/api/auth/reports/access/archive"), eq("POST"), anyMap(), isNull(),
+                isNull(), eq(AuditReportFileDTO.class));
+        verify(apiClient).invokeAPI(eq("/api/auth/reports/settings/archive"), eq("POST"), anyMap(), isNull(),
+                isNull(), eq(AuditReportFileDTO.class));
+    }
+
+    @Test
+    void archive_missingFormat_throwsBeforeCall() {
+        assertThrows(ApiException.class, () -> api.archiveAuditReport(
+                null, START, END, null, null, null, null, null, null));
+        verifyNoInteractions(apiClient);
+    }
+
+    @Test
+    void archive_missingDate_throwsBeforeCall() {
+        assertThrows(ApiException.class, () -> api.archiveSettingsReport(
+                ReportFormat.CSV, null, END, null, null, null, null, null));
+        verifyNoInteractions(apiClient);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void listArchives_deserialisesRecordsAndForwardsFilters()
+            throws ApiException, IOException, InterruptedException {
+        String json = """
+                {
+                  "content": [
+                    {"id":"f1","reportType":"SETTINGS","format":"CSV",
+                     "filePath":"private/audit-reports/alice/uuid_settings-report-2026-07-16.csv",
+                     "fileName":"settings-report-2026-07-16.csv","sizeBytes":128,"rowCount":9,
+                     "generatedBy":"alice","generatedAt":"2026-07-16T10:00:00Z"}
+                  ],
+                  "totalElements": 1, "totalPages": 1, "size": 20, "number": 0,
+                  "first": true, "last": true, "empty": false
+                }
+                """;
+        when(apiClient.invokeAPIRaw(eq("/api/auth/reports/archives"), eq("GET"), anyMap(), isNull(), isNull()))
+                .thenReturn(json);
+
+        PageResponse<AuditReportFileDTO> page = api.listArchives("SETTINGS", "CSV", "alice", 0, 20, null);
+
+        assertEquals(1, page.getContent().size());
+        AuditReportFileDTO row = page.getContent().get(0);
+        assertEquals(ReportType.SETTINGS, row.getReportType());
+        assertEquals(ReportFormat.CSV, row.getFormat());
+        assertTrue(row.getFilePath().startsWith("private/audit-reports/"));
+        assertEquals(Instant.parse("2026-07-16T10:00:00Z"), row.getGeneratedAt());
+
+        ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+        verify(apiClient).invokeAPIRaw(eq("/api/auth/reports/archives"), eq("GET"), captor.capture(),
+                isNull(), isNull());
+        Map<String, String> q = captor.getValue();
+        assertEquals("SETTINGS", q.get("reportType"));
+        assertEquals("CSV", q.get("format"));
+        assertEquals("alice", q.get("generatedBy"));
+        assertEquals("0", q.get("page"));
+        // listArchives has no date bounds — unlike the reports, they are not required
+        assertFalse(q.containsKey("startDate"));
     }
 }

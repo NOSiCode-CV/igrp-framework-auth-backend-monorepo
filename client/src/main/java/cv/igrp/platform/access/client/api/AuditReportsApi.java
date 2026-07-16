@@ -7,7 +7,9 @@ import cv.igrp.platform.access.client.IApiClient;
 import cv.igrp.platform.access.client.JsonUtil;
 import cv.igrp.platform.access.client.model.PageResponse;
 import cv.igrp.platform.access.client.model.reports.AccessReportRowDTO;
+import cv.igrp.platform.access.client.model.reports.AuditReportFileDTO;
 import cv.igrp.platform.access.client.model.reports.AuditReportRowDTO;
+import cv.igrp.platform.access.client.model.reports.ReportFormat;
 import cv.igrp.platform.access.client.model.reports.SettingsReportRowDTO;
 
 import java.io.IOException;
@@ -19,7 +21,8 @@ import java.util.Map;
 /**
  * Client for the reporting surface over the unified audit log
  * ({@code /api/auth/reports}). Exposes the three paginated JSON reports (Audit /
- * Access / Settings) plus their PDF and Excel export variants.
+ * Access / Settings), their PDF, Excel and CSV export variants, and the report
+ * archive.
  *
  * <p>All endpoints are gated server-side by the single {@code igrp.audit.view}
  * permission. {@code startDate} and {@code endDate} are required on every call;
@@ -27,6 +30,17 @@ import java.util.Map;
  * methods take the same filters as their JSON siblings, minus pagination, and
  * return the raw response {@link InputStream} — the caller owns and must close
  * it.
+ *
+ * <p>Two ways to get a document:
+ * <ul>
+ *   <li><strong>Download</strong> ({@code get*Pdf/Xlsx/Csv}) — streams the bytes
+ *       back immediately.</li>
+ *   <li><strong>Archive</strong> ({@code archive*}) — the server stores the
+ *       document and returns an {@link AuditReportFileDTO}. Take its
+ *       {@code filePath} and resolve it through
+ *       {@link FilesApi#getPrivateFilesUrl(String)} for a short-lived presigned
+ *       link. Nothing is downloaded by the archive call itself.</li>
+ * </ul>
  */
 public class AuditReportsApi {
 
@@ -162,7 +176,103 @@ public class AuditReportsApi {
                 settingsFilters(startDate, endDate, performedBy, area, entityType, operation, entityName), null);
     }
 
+    /** Audit Report as CSV — {@code GET /api/auth/reports/audit.csv}. */
+    public InputStream getAuditReportCsv(
+            Instant startDate, Instant endDate,
+            String username, String module, String accessRole, String operationState,
+            String authorizedBy, String status) throws ApiException {
+        return apiClient.invokeAPIStream("/api/auth/reports/audit.csv", "GET",
+                auditFilters(startDate, endDate, username, module, accessRole, operationState, authorizedBy, status),
+                null);
+    }
+
+    /** Access Report as CSV — {@code GET /api/auth/reports/access.csv}. */
+    public InputStream getAccessReportCsv(
+            Instant startDate, Instant endDate,
+            String username, String role, String module, String action, String status) throws ApiException {
+        return apiClient.invokeAPIStream("/api/auth/reports/access.csv", "GET",
+                accessFilters(startDate, endDate, username, role, module, action, status), null);
+    }
+
+    /** Settings Report as CSV — {@code GET /api/auth/reports/settings.csv}. */
+    public InputStream getSettingsReportCsv(
+            Instant startDate, Instant endDate,
+            String performedBy, String area, String entityType, String operation, String entityName)
+            throws ApiException {
+        return apiClient.invokeAPIStream("/api/auth/reports/settings.csv", "GET",
+                settingsFilters(startDate, endDate, performedBy, area, entityType, operation, entityName), null);
+    }
+
+    // --------------------------------------------------------------- Archive
+
+    /**
+     * Archive the Audit Report — {@code POST /api/auth/reports/audit/archive}.
+     * The server generates the document in {@code format}, stores it, and returns
+     * the record. Resolve {@link AuditReportFileDTO#getFilePath()} through
+     * {@link FilesApi#getPrivateFilesUrl(String)} to download it.
+     */
+    public AuditReportFileDTO archiveAuditReport(
+            ReportFormat format, Instant startDate, Instant endDate,
+            String username, String module, String accessRole, String operationState,
+            String authorizedBy, String status)
+            throws ApiException {
+        Map<String, String> q = auditFilters(
+                startDate, endDate, username, module, accessRole, operationState, authorizedBy, status);
+        putFormat(q, format);
+        return apiClient.invokeAPI("/api/auth/reports/audit/archive", "POST", q, null, null,
+                AuditReportFileDTO.class);
+    }
+
+    /** Archive the Access Report — {@code POST /api/auth/reports/access/archive}. */
+    public AuditReportFileDTO archiveAccessReport(
+            ReportFormat format, Instant startDate, Instant endDate,
+            String username, String role, String module, String action, String status)
+            throws ApiException {
+        Map<String, String> q = accessFilters(startDate, endDate, username, role, module, action, status);
+        putFormat(q, format);
+        return apiClient.invokeAPI("/api/auth/reports/access/archive", "POST", q, null, null,
+                AuditReportFileDTO.class);
+    }
+
+    /** Archive the Settings Report — {@code POST /api/auth/reports/settings/archive}. */
+    public AuditReportFileDTO archiveSettingsReport(
+            ReportFormat format, Instant startDate, Instant endDate,
+            String performedBy, String area, String entityType, String operation, String entityName)
+            throws ApiException {
+        Map<String, String> q = settingsFilters(
+                startDate, endDate, performedBy, area, entityType, operation, entityName);
+        putFormat(q, format);
+        return apiClient.invokeAPI("/api/auth/reports/settings/archive", "POST", q, null, null,
+                AuditReportFileDTO.class);
+    }
+
+    /**
+     * List archived report exports, newest first —
+     * {@code GET /api/auth/reports/archives}. All filters are optional.
+     */
+    public PageResponse<AuditReportFileDTO> listArchives(
+            String reportType, String format, String generatedBy,
+            Integer page, Integer size, String sort)
+            throws ApiException, IOException, InterruptedException {
+        Map<String, String> q = new LinkedHashMap<>();
+        putIfPresent(q, "reportType", reportType);
+        putIfPresent(q, "format", format);
+        putIfPresent(q, "generatedBy", generatedBy);
+        putPaging(q, page, size, sort);
+
+        String raw = apiClient.invokeAPIRaw("/api/auth/reports/archives", "GET", q, null, null);
+        return JsonUtil.deserialize(raw, new TypeReference<PageResponse<AuditReportFileDTO>>() {});
+    }
+
     // --------------------------------------------------------------- helpers
+
+    /** {@code format} is required by the server; fail fast rather than 400 on the wire. */
+    private static void putFormat(Map<String, String> q, ReportFormat format) throws ApiException {
+        if (format == null) {
+            throw new ApiException(400, "Missing the required parameter 'format'");
+        }
+        q.put("format", format.name());
+    }
 
     private Map<String, String> auditFilters(
             Instant startDate, Instant endDate,
