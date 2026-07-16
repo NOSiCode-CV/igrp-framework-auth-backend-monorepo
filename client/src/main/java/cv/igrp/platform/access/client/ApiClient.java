@@ -6,6 +6,7 @@ import cv.igrp.platform.access.client.errors.ProblemDetail;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -31,6 +32,39 @@ public class ApiClient implements IApiClient {
     @Override
     public String getToken() {
         return authToken;
+    }
+
+    /**
+     * Build the request URI, percent-encoding every query value.
+     *
+     * <p>Encoding is not optional here: audit filters carry user-supplied text.
+     * A {@code generatedBy} email, or an {@code entityName} containing a space,
+     * {@code &} or {@code +}, would otherwise either corrupt the query (a bare
+     * {@code &} starts a new parameter, a {@code +} arrives as a space) or make
+     * {@link URI#create(String)} throw outright.
+     *
+     * <p>Keys are encoded too — cheap, and they are no more trustworthy than
+     * values. Note {@link java.net.URLEncoder} is form-encoding: it maps a space
+     * to {@code +}, which is what a server's query parser expects, and is what
+     * Spring's {@code @RequestParam} decodes back to a space.
+     */
+    // Package-private so the encoding contract can be asserted without a live server.
+    String buildUri(String path, Map<String, String> queryParams) {
+        StringBuilder uriBuilder = new StringBuilder(baseUrl + path);
+        if (queryParams != null && !queryParams.isEmpty()) {
+            uriBuilder.append("?");
+            queryParams.forEach((k, v) -> uriBuilder
+                    .append(encode(k))
+                    .append("=")
+                    .append(encode(v))
+                    .append("&"));
+            uriBuilder.deleteCharAt(uriBuilder.length() - 1);
+        }
+        return uriBuilder.toString();
+    }
+
+    private static String encode(String value) {
+        return value == null ? "" : URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     @Override
@@ -65,15 +99,8 @@ public class ApiClient implements IApiClient {
     public InputStream invokeAPIStream(String path, String method, Map<String, String> queryParams,
                                        Map<String, String> headerParams) throws ApiException {
         try {
-            StringBuilder uriBuilder = new StringBuilder(baseUrl + path);
-            if (queryParams != null && !queryParams.isEmpty()) {
-                uriBuilder.append("?");
-                queryParams.forEach((k, v) -> uriBuilder.append(k).append("=").append(v).append("&"));
-                uriBuilder.deleteCharAt(uriBuilder.length() - 1);
-            }
-
             HttpRequest.Builder builder = HttpRequest.newBuilder()
-                    .uri(URI.create(uriBuilder.toString()))
+                    .uri(URI.create(buildUri(path, queryParams)))
                     // Binary exports negotiate their own content type; accept anything.
                     .header("Accept", "*/*");
 
@@ -154,15 +181,8 @@ public class ApiClient implements IApiClient {
     private HttpResponse<String> getStringHttpResponse(String path, String method, Map<String, String> queryParams,
                                                        Object body, Map<String, String> headerParams)
             throws IOException, InterruptedException, ApiException {
-        StringBuilder uriBuilder = new StringBuilder(baseUrl + path);
-        if (queryParams != null && !queryParams.isEmpty()) {
-            uriBuilder.append("?");
-            queryParams.forEach((k, v) -> uriBuilder.append(k).append("=").append(v).append("&"));
-            uriBuilder.deleteCharAt(uriBuilder.length() - 1);
-        }
-
         HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(URI.create(uriBuilder.toString()))
+                .uri(URI.create(buildUri(path, queryParams)))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json");
 
