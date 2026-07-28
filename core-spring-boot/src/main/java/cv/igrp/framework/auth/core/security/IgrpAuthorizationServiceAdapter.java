@@ -42,8 +42,12 @@ public class IgrpAuthorizationServiceAdapter implements IAuthorizationServiceAda
             List<RoleDTO> roles = usersApi.getCurrentUserRoles();
             LOGGER.debug("Roles: {}", roles);
 
+            // Map to RoleDTO.code — the machine identifier that @PreAuthorize
+            // ("hasAnyRole('MY_ROLE')") matches against. RoleDTO.name is the
+            // human label ("Administrator") and would silently deny every
+            // hasAnyRole check that names the code.
             return roles.stream()
-                    .map(RoleDTO::getName)
+                    .map(RoleDTO::getCode)
                     .collect(Collectors.toSet());
 
         } catch (Exception e) {
