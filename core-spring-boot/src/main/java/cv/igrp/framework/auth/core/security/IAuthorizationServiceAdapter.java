@@ -7,5 +7,6 @@ public interface IAuthorizationServiceAdapter {
     Set<String> getRoles(String jwt);
     Set<String> getPermissions(String jwt);
     Set<String> getDepartments(String jwt);
+    boolean isSuperAdmin(String jwt);
 
 }
