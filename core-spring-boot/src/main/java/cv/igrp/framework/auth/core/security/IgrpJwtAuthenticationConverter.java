@@ -44,6 +44,17 @@ public class IgrpJwtAuthenticationConverter {
                         authorities.add(new SimpleGrantedAuthority("GROUP_" + d));
                     });
 
+            // Stamp the super-admin marker authority when the JWT says so.
+            // IgrpAuthorizationService.check{Permission,AllPermissions,AnyPermission}
+            // short-circuits to true when this authority is present, so super-admins
+            // pass every framework-driven permission check without having to be
+            // granted each permission individually. For hasAnyRole('X') / hasRole('X')
+            // checks (Spring's own SpEL), compose the marker via
+            // @PreAuthorize("@igrpAuthorization.isSuperAdmin() or hasAnyRole('X')").
+            if (authorizationService.isSuperAdmin(token)) {
+                authorities.add(new SimpleGrantedAuthority(IgrpAuthorizationService.SUPER_ADMIN_AUTHORITY));
+            }
+
             // Always include activiti-user role
             authorities.add(new SimpleGrantedAuthority("ROLE_ACTIVITI_USER"));
 
