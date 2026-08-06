@@ -27,6 +27,16 @@
         <java.version>26</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
+        <!--
+            Emit method-parameter names into the compiled bytecode.
+            Required so Spring's SpEL @Cacheable / @PreAuthorize expressions
+            that reference named parameters (e.g. `#jwt`) can resolve them at
+            runtime. Spring Framework 6.1 (Boot 3.2+) removed the
+            LocalVariableTable-based fallback, so libraries built without
+            -parameters silently break every consumer's cache-key evaluation
+            on newer Spring versions.
+        -->
+        <maven.compiler.parameters>true</maven.compiler.parameters>
         <igrp.encoding>UTF-8</igrp.encoding>
         <project.build.sourceEncoding>${igrp.encoding}</project.build.sourceEncoding>
         <project.reporting.outputEncoding>${igrp.encoding}</project.reporting.outputEncoding>

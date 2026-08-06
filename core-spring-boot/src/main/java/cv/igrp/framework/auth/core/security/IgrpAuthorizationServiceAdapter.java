@@ -78,7 +78,7 @@ public class IgrpAuthorizationServiceAdapter implements IAuthorizationServiceAda
     private static final String CLAIM_IS_SUPER_ADMIN = "is_super_admin";
 
     @Override
-    @Cacheable(value = "igrp.auth.rolesCache", key = "#jwt", unless = "#result.isEmpty()")
+    @Cacheable(value = "igrp.auth.rolesCache", key = "#p0", unless = "#result.isEmpty()")
     public Set<String> getRoles(String jwt) {
         try {
             Map<String, Object> claims = parseClaims(jwt);
@@ -106,7 +106,7 @@ public class IgrpAuthorizationServiceAdapter implements IAuthorizationServiceAda
     }
 
     @Override
-    @Cacheable(value = "igrp.auth.permissionsCache", key = "#jwt", unless = "#result.isEmpty()")
+    @Cacheable(value = "igrp.auth.permissionsCache", key = "#p0", unless = "#result.isEmpty()")
     public Set<String> getPermissions(String jwt) {
         try {
             Map<String, Object> claims = parseClaims(jwt);
@@ -129,7 +129,7 @@ public class IgrpAuthorizationServiceAdapter implements IAuthorizationServiceAda
     }
 
     @Override
-    @Cacheable(value = "igrp.auth.departmentsCache", key = "#jwt", unless = "#result.isEmpty()")
+    @Cacheable(value = "igrp.auth.departmentsCache", key = "#p0", unless = "#result.isEmpty()")
     public Set<String> getDepartments(String jwt) {
         try {
             Map<String, Object> claims = parseClaims(jwt);
@@ -146,7 +146,7 @@ public class IgrpAuthorizationServiceAdapter implements IAuthorizationServiceAda
     }
 
     @Override
-    @Cacheable(value = "igrp.auth.superAdminCache", key = "#jwt")
+    @Cacheable(value = "igrp.auth.superAdminCache", key = "#p0")
     public boolean isSuperAdmin(String jwt) {
         try {
             Map<String, Object> claims = parseClaims(jwt);
