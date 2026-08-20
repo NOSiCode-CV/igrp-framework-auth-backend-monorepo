@@ -66,7 +66,8 @@ import java.util.stream.Collectors;
 @Component
 @ConditionalOnProperty(
         name = "igrp.authorization.service.adapter",
-        havingValue = "igrp"
+        havingValue = "igrp",
+        matchIfMissing = true
 )
 public class IgrpAuthorizationServiceAdapter implements IAuthorizationServiceAdapter {
 
