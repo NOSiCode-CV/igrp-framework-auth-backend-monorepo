@@ -544,11 +544,17 @@ public class DepartmentsApi {
 
     // GET /api/departments/{code}/permissions (with optional permissionName filter)
     public List<PermissionDTO> getDepartmentPermissions(String departmentCode, String permissionName) throws ApiException, IOException, InterruptedException {
+        return getDepartmentPermissions(departmentCode, permissionName, null);
+    }
+
+    // GET /api/departments/{code}/permissions (with optional permissionName and resourceName filters)
+    public List<PermissionDTO> getDepartmentPermissions(String departmentCode, String permissionName, String resourceName) throws ApiException, IOException, InterruptedException {
         if (departmentCode == null) {
             throw new ApiException(400, "Missing required parameter 'departmentCode'");
         }
         Map<String, String> queryParams = new HashMap<>();
         if (permissionName != null) queryParams.put("permissionName", permissionName);
+        if (resourceName != null) queryParams.put("resourceName", resourceName);
         String path = "/api/departments/{code}/permissions".replace("{code}", departmentCode);
         String response = apiClient.invokeAPIRaw(path, "GET", queryParams, null, null);
         return JsonUtil.deserialize(response, new TypeReference<>() {});

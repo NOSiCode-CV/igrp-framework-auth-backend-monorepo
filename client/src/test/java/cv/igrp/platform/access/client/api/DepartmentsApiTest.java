@@ -156,6 +156,42 @@ class DepartmentsApiTest {
     }
 
     @Test
+    void getDepartmentPermissions_WithResourceNameFilter_Success() throws ApiException, IOException, InterruptedException {
+        String jsonResponse = "[{\"id\":1,\"name\":\"Permission1\"}]";
+        when(apiClient.invokeAPIRaw(eq("/api/departments/HR/permissions"), eq("GET"), anyMap(), isNull(), isNull()))
+                .thenReturn(jsonResponse);
+
+        List<?> result = departmentsApi.getDepartmentPermissions("HR", null, "invoice-service");
+
+        assertEquals(1, result.size());
+        verify(apiClient).invokeAPIRaw(
+                "/api/departments/HR/permissions",
+                "GET",
+                Map.of("resourceName", "invoice-service"),
+                null,
+                null
+        );
+    }
+
+    @Test
+    void getDepartmentPermissions_WithBothFilters_Success() throws ApiException, IOException, InterruptedException {
+        String jsonResponse = "[{\"id\":1,\"name\":\"Permission1\"}]";
+        when(apiClient.invokeAPIRaw(eq("/api/departments/HR/permissions"), eq("GET"), anyMap(), isNull(), isNull()))
+                .thenReturn(jsonResponse);
+
+        List<?> result = departmentsApi.getDepartmentPermissions("HR", "Permission1", "invoice-service");
+
+        assertEquals(1, result.size());
+        verify(apiClient).invokeAPIRaw(
+                "/api/departments/HR/permissions",
+                "GET",
+                Map.of("permissionName", "Permission1", "resourceName", "invoice-service"),
+                null,
+                null
+        );
+    }
+
+    @Test
     void getAvailablePermissions_WithResourceNameFilter_Success() throws ApiException, IOException, InterruptedException {
         String jsonResponse = "[{\"id\":1,\"name\":\"Perm1\"}]";
         when(apiClient.invokeAPIRaw(eq("/api/departments/HR/permissions/available"), eq("GET"), anyMap(), isNull(), isNull()))
