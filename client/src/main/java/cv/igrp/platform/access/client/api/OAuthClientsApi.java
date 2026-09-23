@@ -76,6 +76,23 @@ public class OAuthClientsApi {
         return apiClient.invokeAPI(path, "PUT", null, request, null, OAuthClientDTO.class);
     }
 
+    /**
+     * Rotate an existing client's secret.
+     *
+     * <p>The returned DTO carries the new raw {@code clientSecret} — capture it
+     * before the response goes out of scope, it is not recoverable afterwards.
+     * The {@code id} and {@code clientId} are preserved, so only the secret has
+     * to be redistributed. The previous secret stops working immediately;
+     * access tokens already issued remain valid until they expire.
+     */
+    public OAuthClientDTO rotateOAuthClientSecret(String id) throws ApiException {
+        if (id == null) {
+            throw new ApiException(400, "Missing the required parameter 'id'");
+        }
+        String path = "/api/clients/{id}/rotate-secret".replaceAll("\\{" + "id" + "}", id);
+        return apiClient.invokeAPI(path, "POST", null, null, null, OAuthClientDTO.class);
+    }
+
     /** Delete an OAuth2 client. */
     public void deleteOAuthClient(String id) throws ApiException {
         if (id == null) {
