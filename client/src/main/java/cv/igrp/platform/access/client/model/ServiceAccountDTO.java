@@ -3,7 +3,9 @@ package cv.igrp.platform.access.client.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -48,18 +50,40 @@ public class ServiceAccountDTO {
     @JsonProperty("applicationCode")
     private String applicationCode;
 
+    /**
+     * Roles held, each as an id/code/department triple, ordered by id.
+     *
+     * <p>Use this rather than {@link #roleIds} + {@link #roleCodes}: those are two
+     * independent sets and item <i>n</i> of one is NOT item <i>n</i> of the other.
+     */
+    @JsonProperty("roles")
+    private List<ServiceAccountRoleDTO> roles = new ArrayList<>();
+
+    /**
+     * Permissions granted DIRECTLY on the account (bypassing the role layer), each
+     * as an id/name pair, ordered by id. Use this rather than
+     * {@link #permissionIds} + {@link #permissionNames}, for the same reason.
+     */
+    @JsonProperty("permissions")
+    private List<ServiceAccountPermissionDTO> permissions = new ArrayList<>();
+
+    /** @deprecated cannot be paired with {@link #roleCodes}; use {@link #roles}. */
+    @Deprecated
     @JsonProperty("roleIds")
     private Set<Integer> roleIds = new LinkedHashSet<>();
 
-    /** Denormalised role codes matching {@link #roleIds}. */
+    /** @deprecated cannot be paired with {@link #roleIds}; use {@link #roles}. */
+    @Deprecated
     @JsonProperty("roleCodes")
     private Set<String> roleCodes = new LinkedHashSet<>();
 
-    /** Permissions granted DIRECTLY on the service account (bypass role layer). */
+    /** @deprecated cannot be paired with {@link #permissionNames}; use {@link #permissions}. */
+    @Deprecated
     @JsonProperty("permissionIds")
     private Set<Integer> permissionIds = new LinkedHashSet<>();
 
-    /** Denormalised permission names matching {@link #permissionIds}. */
+    /** @deprecated cannot be paired with {@link #permissionIds}; use {@link #permissions}. */
+    @Deprecated
     @JsonProperty("permissionNames")
     private Set<String> permissionNames = new LinkedHashSet<>();
 
@@ -92,6 +116,12 @@ public class ServiceAccountDTO {
 
     public String getApplicationCode() { return applicationCode; }
     public void setApplicationCode(String applicationCode) { this.applicationCode = applicationCode; }
+
+    public List<ServiceAccountRoleDTO> getRoles() { return roles; }
+    public void setRoles(List<ServiceAccountRoleDTO> roles) { this.roles = roles; }
+
+    public List<ServiceAccountPermissionDTO> getPermissions() { return permissions; }
+    public void setPermissions(List<ServiceAccountPermissionDTO> permissions) { this.permissions = permissions; }
 
     public Set<Integer> getRoleIds() { return roleIds; }
     public void setRoleIds(Set<Integer> roleIds) { this.roleIds = roleIds; }
