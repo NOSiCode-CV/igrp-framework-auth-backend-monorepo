@@ -33,6 +33,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -81,6 +82,13 @@ class WireFormatBaselineTest {
      * side with the exact shape {@code GlobalExceptionHandler} produces, plus an
      * unknown extension member that must be tolerated.
      */
+    @Test
+    void malformedJsonStaysACheckedIOException() {
+        // ApiClient's catch (IOException) blocks turn this into an ApiException;
+        // Jackson 3 exceptions are unchecked and would skip them.
+        assertThrows(IOException.class, () -> JsonUtil.deserialize("{\"title\":", ProblemDetail.class));
+    }
+
     @Test
     void problemDetailFromTheApiIsReadAsBefore() throws Exception {
         String body = "{\"type\":\"about:blank\",\"title\":\"Role not found with code: ADMIN\",\"status\":404,"

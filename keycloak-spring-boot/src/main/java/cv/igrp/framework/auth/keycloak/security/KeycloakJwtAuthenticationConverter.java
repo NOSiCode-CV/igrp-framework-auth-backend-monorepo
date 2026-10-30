@@ -3,14 +3,17 @@ package cv.igrp.framework.auth.keycloak.security;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Configuration
+// When core-spring-boot is present its converter wins, on every startup: this one
+// is evaluated after it and backs off. Named as a string because core-spring-boot
+// is optional here.
+@AutoConfiguration(afterName = "cv.igrp.framework.auth.core.security.IgrpJwtAuthenticationConverter")
 public class KeycloakJwtAuthenticationConverter {
 
     @Bean

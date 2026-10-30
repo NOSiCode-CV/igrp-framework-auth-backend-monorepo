@@ -1,6 +1,6 @@
 package cv.igrp.platform.access.client.api;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.core.type.TypeReference;
 import cv.igrp.platform.access.client.ApiClient;
 import cv.igrp.platform.access.client.ApiException;
 import cv.igrp.platform.access.client.IApiClient;

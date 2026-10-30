@@ -2,10 +2,10 @@ package cv.igrp.framework.auth.core.config;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
-@Configuration(proxyBeanMethods = false)
+@AutoConfiguration
 @EnableConfigurationProperties(MethodSecurityProperties.class)
 @EnableMethodSecurity
 @ConditionalOnProperty(

@@ -5,7 +5,7 @@ import cv.igrp.platform.access.client.IApiClient;
 import cv.igrp.platform.access.client.ApiException;
 import cv.igrp.platform.access.client.JsonUtil;
 import cv.igrp.platform.access.client.model.ApplicationDTO;
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.core.type.TypeReference;
 import cv.igrp.platform.access.client.model.MenuEntryDTO;
 
 import java.io.IOException;

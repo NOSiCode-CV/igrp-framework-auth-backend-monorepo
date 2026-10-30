@@ -2,7 +2,7 @@ package cv.igrp.platform.access.client.api;
 
 import cv.igrp.platform.access.client.*;
 import cv.igrp.platform.access.client.model.*;
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.core.type.TypeReference;
 
 import java.io.IOException;
 import java.util.List;

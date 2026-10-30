@@ -1,0 +1,2 @@
+cv.igrp.framework.auth.keycloak.config.AutoConfiguration
+cv.igrp.framework.auth.keycloak.security.KeycloakJwtAuthenticationConverter

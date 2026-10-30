@@ -6,7 +6,7 @@
 
     <groupId>cv.igrp.framework.auth</groupId>
     <artifactId>backend</artifactId>
-    <version>0.2.0-beta.8</version>
+    <version>0.3.0-beta.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>iGRP Framework Auth Backend</name>
@@ -18,9 +18,6 @@
         <module>core-spring-boot</module>
         <module>keycloak</module>
         <module>keycloak-spring-boot</module>
-        <module>permify-spring-boot</module>
-        <module>wso2</module>
-        <module>wso2-spring-boot</module>
     </modules>
 
     <properties>
@@ -40,7 +37,26 @@
         <igrp.encoding>UTF-8</igrp.encoding>
         <project.build.sourceEncoding>${igrp.encoding}</project.build.sourceEncoding>
         <project.reporting.outputEncoding>${igrp.encoding}</project.reporting.outputEncoding>
+        <spring-boot.version>4.1.2</spring-boot.version>
     </properties>
+
+    <!--
+        The 0.3.x line targets Spring Boot 4 only; Boot 3.5 consumers stay on
+        0.2.x. The Boot 4 migration guide strongly discourages supporting both
+        from one artifact. wso2, wso2-spring-boot and permify-spring-boot are
+        frozen on 0.2.x (Boot 3.5) and are no longer part of this build.
+    -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <scm>
         <url>http://git.nosi.cv/igrp-3_0/igrp-framework-auth-backend-monorepo</url>

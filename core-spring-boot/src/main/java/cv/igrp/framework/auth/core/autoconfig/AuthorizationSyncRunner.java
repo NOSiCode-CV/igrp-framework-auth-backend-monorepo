@@ -10,7 +10,6 @@ import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.List;
@@ -37,7 +36,6 @@ import java.util.List;
  * back to the deprecated {@code M2MApi} signatures. New deployments
  * should use the client-credentials properties.
  */
-@Component
 public class AuthorizationSyncRunner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthorizationSyncRunner.class);

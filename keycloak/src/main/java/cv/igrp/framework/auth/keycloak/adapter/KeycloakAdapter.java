@@ -1,7 +1,7 @@
 package cv.igrp.framework.auth.keycloak.adapter;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 import cv.igrp.framework.auth.core.adapter.IAdapter;
 import cv.igrp.framework.auth.core.exception.IAMException;
 import cv.igrp.framework.auth.core.model.*;
@@ -26,6 +26,7 @@ import static java.util.Optional.ofNullable;
 public class KeycloakAdapter implements IAdapter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KeycloakAdapter.class);
+    private static final JsonMapper ROLES_JSON = JsonMapper.builder().configureForJackson2().build();
     public static final String POLICY_SUFFIX = "_p";
     public static final String GROUP_PATH_SEPARATOR = "/";
     public static final String CLIENT_PREFIX = "client_";
@@ -584,7 +585,7 @@ public class KeycloakAdapter implements IAdapter {
 
             Map<String, String> config = ofNullable(policy.getConfig()).orElse(new HashMap<>());
             config.put("fetchRoles", "false");
-            config.put("roles", new ObjectMapper().writeValueAsString(rolesConfig));
+            config.put("roles", ROLES_JSON.writeValueAsString(rolesConfig));
             policy.setConfig(config);
             authorizationResource.policies().policy(policy.getId()).update(policy);
 
@@ -607,8 +608,7 @@ public class KeycloakAdapter implements IAdapter {
 
             PolicyRepresentation policy = authorizationResource.policies().findByName(policyName);
             String rolesJson = policy.getConfig().get("roles");
-            ObjectMapper mapper = new ObjectMapper();
-            List<Map<String, Object>> existingRoles = mapper.readValue(rolesJson, new TypeReference<>() {
+            List<Map<String, Object>> existingRoles = ROLES_JSON.readValue(rolesJson, new TypeReference<>() {
             });
 
             List<Map<String, Object>> updatedRoles = existingRoles.stream()
@@ -626,7 +626,7 @@ public class KeycloakAdapter implements IAdapter {
                     .collect(Collectors.toList());
 
             Map<String, String> config = policy.getConfig();
-            config.put("roles", mapper.writeValueAsString(updatedRoles));
+            config.put("roles", ROLES_JSON.writeValueAsString(updatedRoles));
             policy.setConfig(config);
             authorizationResource.policies().policy(policy.getId()).update(policy);
 
@@ -656,8 +656,7 @@ public class KeycloakAdapter implements IAdapter {
                 PolicyRepresentation policy = authorizationResource.policies().findByName(policyName);
 
                 String rolesJson = policy.getConfig().get("roles");
-                ObjectMapper mapper = new ObjectMapper();
-                List<Map<String, Object>> existingRoles = mapper.readValue(rolesJson, new TypeReference<>() {
+                List<Map<String, Object>> existingRoles = ROLES_JSON.readValue(rolesJson, new TypeReference<>() {
                 });
 
                 boolean alreadyExists = existingRoles.stream()
@@ -666,7 +665,7 @@ public class KeycloakAdapter implements IAdapter {
                 if (!alreadyExists) {
                     existingRoles.add(roleEntry);
                     Map<String, String> config = policy.getConfig();
-                    config.put("roles", mapper.writeValueAsString(existingRoles));
+                    config.put("roles", ROLES_JSON.writeValueAsString(existingRoles));
                     policy.setConfig(config);
                     authorizationResource.policies().policy(policy.getId()).update(policy);
                 }
@@ -694,8 +693,7 @@ public class KeycloakAdapter implements IAdapter {
                 PolicyRepresentation policy = authorizationResource.policies().findByName(policyName);
 
                 String rolesJson = policy.getConfig().get("roles");
-                ObjectMapper mapper = new ObjectMapper();
-                List<Map<String, Object>> existingRoles = mapper.readValue(rolesJson, new TypeReference<>() {
+                List<Map<String, Object>> existingRoles = ROLES_JSON.readValue(rolesJson, new TypeReference<>() {
                 });
 
                 List<Map<String, Object>> updatedRoles = existingRoles.stream()
@@ -704,7 +702,7 @@ public class KeycloakAdapter implements IAdapter {
 
                 if (updatedRoles.size() != existingRoles.size()) {
                     Map<String, String> config = policy.getConfig();
-                    config.put("roles", mapper.writeValueAsString(updatedRoles));
+                    config.put("roles", ROLES_JSON.writeValueAsString(updatedRoles));
                     policy.setConfig(config);
                     authorizationResource.policies().policy(policy.getId()).update(policy);
                 }
@@ -1265,8 +1263,7 @@ public class KeycloakAdapter implements IAdapter {
             LOGGER.info("[getPermissionRoles] Policy fetched: {}", policy != null ? policy.getName() : null);
             if (policy != null && policy.getConfig() != null && policy.getConfig().containsKey("roles")) {
                 String rolesJson = policy.getConfig().get("roles");
-                ObjectMapper mapper = new ObjectMapper();
-                List<Map<String, Object>> roles = mapper.readValue(rolesJson, new TypeReference<>() {});
+                List<Map<String, Object>> roles = ROLES_JSON.readValue(rolesJson, new TypeReference<>() {});
                 Set<String> result = roles.stream()
                         .map(role -> {
                             String roleId = (String) role.get("id");
@@ -1301,8 +1298,7 @@ public class KeycloakAdapter implements IAdapter {
                         try {
                             if (policy.getConfig() != null && policy.getConfig().containsKey("roles")) {
                                 String rolesJson = policy.getConfig().get("roles");
-                                ObjectMapper mapper = new ObjectMapper();
-                                List<Map<String, Object>> roles = mapper.readValue(rolesJson, new TypeReference<>() {});
+                                List<Map<String, Object>> roles = ROLES_JSON.readValue(rolesJson, new TypeReference<>() {});
                                 return roles.stream().anyMatch(r -> Objects.requireNonNull(role).getId().equals(r.get("id")));
                             }
                             return false;

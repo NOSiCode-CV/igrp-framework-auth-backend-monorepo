@@ -2,7 +2,8 @@ package cv.igrp.platform.access.client.auth;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 import cv.igrp.platform.access.client.ApiException;
 import cv.igrp.platform.access.client.errors.ProblemDetail;
 
@@ -45,7 +46,7 @@ public class ClientCredentialsTokenProvider {
     private final String scope;
     private final long refreshLeewaySeconds;
     private final HttpClient httpClient;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JsonMapper objectMapper = JsonMapper.builder().configureForJackson2().build();
 
     private final Object lock = new Object();
     private volatile String cachedAccessToken;
@@ -151,7 +152,7 @@ public class ClientCredentialsTokenProvider {
             ProblemDetail pd = parseProblemDetail(response.body());
             throw new ApiException(status, pd != null ? pd
                     : problemDetailFromOAuth2Error(status, response.body()));
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException | InterruptedException | JacksonException e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
@@ -165,7 +166,7 @@ public class ClientCredentialsTokenProvider {
         }
         try {
             return objectMapper.readValue(body, ProblemDetail.class);
-        } catch (IOException ex) {
+        } catch (JacksonException ex) {
             return null;
         }
     }

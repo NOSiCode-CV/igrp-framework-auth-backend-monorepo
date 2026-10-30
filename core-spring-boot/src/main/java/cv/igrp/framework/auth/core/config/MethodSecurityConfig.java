@@ -2,11 +2,11 @@ package cv.igrp.framework.auth.core.config;
 
 import cv.igrp.framework.auth.core.security.IgrpMethodSecurityExpressionHandler;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.expression.spel.support.StandardTypeLocator;
 import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 
-@Configuration
+@AutoConfiguration
 public class MethodSecurityConfig {
 
     @Bean
