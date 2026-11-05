@@ -1,0 +1,1 @@
+{"clientId":"clientId","clientName":"clientName","description":"description","active":true,"applicationId":7,"accessTokenTtl":7,"refreshTokenTtl":7,"authorizationCodeTtl":7,"scopes":["scopesItem"],"redirectUris":["redirectUrisItem"],"grantTypes":["grantTypesItem"]}

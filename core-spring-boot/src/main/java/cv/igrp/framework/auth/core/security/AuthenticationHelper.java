@@ -4,12 +4,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.stereotype.Component;
 
 /**
  * Helper class for extracting information from the authentication token in the security context.
  */
-@Component
 public class AuthenticationHelper {
 
     /**

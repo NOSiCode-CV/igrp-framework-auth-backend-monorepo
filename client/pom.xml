@@ -7,12 +7,11 @@
     <parent>
         <groupId>cv.igrp.framework.auth</groupId>
         <artifactId>backend</artifactId>
-        <version>0.2.0-beta.8</version>
+        <version>0.3.0-beta.1-SNAPSHOT</version>
     </parent>
 
     <groupId>cv.igrp.platform.access</groupId>
     <artifactId>client</artifactId>
-    <version>0.2.0-beta.15</version>
     <name>iGRP Platform Access Management Client Java</name>
     <description>iGRP 3.0 Platform Access Management Client Java</description>
     <url>https://igrp.cv</url>
@@ -20,30 +19,20 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>26</java.version>
-        <jackson.version>2.15.2</jackson.version>
         <jacoco.version>0.8.13</jacoco.version>
-        <httpclient.version>4.5.14</httpclient.version>
     </properties>
 
     <dependencies>
 
-        <!-- JSON Processing -->
+        <!-- JSON Processing. The mapper is private to this SDK. -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
+            <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jsr310</artifactId>
-            <version>${jackson.version}</version>
-        </dependency>
-
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

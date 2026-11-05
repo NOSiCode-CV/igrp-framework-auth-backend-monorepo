@@ -8,7 +8,7 @@
     <parent>
         <groupId>cv.igrp.framework.auth</groupId>
         <artifactId>backend</artifactId>
-        <version>0.2.0-beta.8</version>
+        <version>0.3.0-beta.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>keycloak</artifactId>
@@ -24,7 +24,7 @@
         <dependency>
             <groupId>cv.igrp.framework.auth</groupId>
             <artifactId>core</artifactId>
-            <version>0.2.0-beta.2</version>
+            <version>${project.version}</version>
         </dependency>
 
         <!-- Keycloak Dependencies -->
@@ -41,12 +41,10 @@
             <artifactId>slf4j-api</artifactId>
             <version>2.0.17</version>
         </dependency>
-        <!-- SLF4J Binding for Logback -->
+        <!-- The adapter's own JSON. keycloak-admin-client keeps its internal Jackson 2. -->
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>2.0.17</version>
-            <scope>runtime</scope>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
         </dependency>
 
     </dependencies>

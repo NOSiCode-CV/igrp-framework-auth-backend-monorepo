@@ -4,9 +4,7 @@ import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -63,12 +61,6 @@ import java.util.stream.Collectors;
  * authorization logic. A missing claim (as opposed to a malformed token) also
  * returns an empty set.
  */
-@Component
-@ConditionalOnProperty(
-        name = "igrp.authorization.service.adapter",
-        havingValue = "igrp",
-        matchIfMissing = true
-)
 public class IgrpAuthorizationServiceAdapter implements IAuthorizationServiceAdapter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IgrpAuthorizationServiceAdapter.class);

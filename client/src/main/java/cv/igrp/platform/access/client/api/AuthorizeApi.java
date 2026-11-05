@@ -6,7 +6,7 @@ import cv.igrp.platform.access.client.ApiException;
 import cv.igrp.platform.access.client.JsonUtil;
 import cv.igrp.platform.access.client.model.PermissionCheckRequestDTO;
 import cv.igrp.platform.access.client.model.PermissionCheckResponseDTO;
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.core.type.TypeReference;
 
 import java.io.IOException;
 import java.util.List;

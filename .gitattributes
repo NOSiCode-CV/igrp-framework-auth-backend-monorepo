@@ -1,0 +1,3 @@
+# Golden files for the client wire-format baseline are compared byte for
+# byte; keep them LF on every checkout, whatever core.autocrlf says.
+client/src/test/resources/wire-baseline/** text eol=lf

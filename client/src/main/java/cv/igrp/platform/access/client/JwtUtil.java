@@ -1,7 +1,7 @@
 package cv.igrp.platform.access.client;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -31,7 +31,7 @@ public class JwtUtil {
                     StandardCharsets.UTF_8
             );
 
-            ObjectMapper mapper = new ObjectMapper();
+            JsonMapper mapper = JsonMapper.builder().configureForJackson2().build();
             JsonNode root = mapper.readTree(payloadJson);
 
             JsonNode rolesNode = root
@@ -44,7 +44,7 @@ public class JwtUtil {
             }
 
             for (JsonNode role : rolesNode) {
-                if ("DEPT_IGRP.superadmin".equals(role.asText())) {
+                if ("DEPT_IGRP.superadmin".equals(role.asString())) {
                     return true;
                 }
             }

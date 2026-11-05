@@ -1,7 +1,7 @@
 package cv.igrp.framework.auth.core.security;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.core.GrantedAuthority;
@@ -12,7 +12,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 
-@Configuration
+@AutoConfiguration(after = cv.igrp.framework.auth.core.autoconfig.AutoConfiguration.class)
 public class IgrpJwtAuthenticationConverter {
 
     @Bean
