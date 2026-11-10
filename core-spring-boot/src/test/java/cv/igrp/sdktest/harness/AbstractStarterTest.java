@@ -22,6 +22,7 @@ import org.testcontainers.utility.DockerImageName;
 public abstract class AbstractStarterTest {
 
     protected static final String SERVICE_NAME = "starter-test";
+    protected static final String SERVICE_VERSION = "1.4.0";
     protected static final String CLIENT_ID = "starter-test-client";
     protected static final String CLIENT_SECRET = "starter-test-secret";
 
@@ -41,6 +42,7 @@ public abstract class AbstractStarterTest {
     @DynamicPropertySource
     static void starterProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.application.name", () -> SERVICE_NAME);
+        registry.add("igrp.security.service-version", () -> SERVICE_VERSION);
         registry.add("igrp.access.api.base-url", AM::baseUrl);
         registry.add("igrp.access.m2m.client-id", () -> CLIENT_ID);
         registry.add("igrp.access.m2m.client-secret", () -> CLIENT_SECRET);
