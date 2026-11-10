@@ -132,8 +132,8 @@
                                         <limit>
                                             <counter>INSTRUCTION</counter>
                                             <value>COVEREDRATIO</value>
-                                            <!-- Measured 0.567 on 2026-11-09; raise it as v3 tickets land. -->
-                                            <minimum>0.55</minimum>
+                                            <!-- Measured 0.745 on 2026-11-10 (v3-02); raise it as v3 tickets land. -->
+                                            <minimum>0.70</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

@@ -56,7 +56,7 @@ public class AuthorizationSyncRunner {
     @Value("${igrp.access.m2m.sync-token:}")
     private String legacyM2mToken;
 
-    @Value("${spring.application.name:}")
+    @Value("${igrp.security.service-name:${spring.application.name:}}")
     private String applicationName;
 
     public AuthorizationSyncRunner(ApiClient accessClient) {

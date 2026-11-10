@@ -5,11 +5,17 @@ import cv.igrp.framework.auth.core.security.AuthenticationHelper;
 import cv.igrp.framework.auth.core.security.IAuthorizationServiceAdapter;
 import cv.igrp.framework.auth.core.security.IgrpAuthorizationService;
 import cv.igrp.framework.auth.core.security.IgrpAuthorizationServiceAdapter;
+import cv.igrp.framework.auth.core.route.RouteCatalog;
+import cv.igrp.framework.auth.core.route.RouteRegistrar;
 import cv.igrp.platform.access.client.ApiClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
+
+import java.time.Duration;
 
 /**
  * Auto-configuration entry point for {@code cv.igrp.framework.auth:core-spring-boot}.
@@ -63,5 +69,25 @@ public class AutoConfiguration {
     @ConditionalOnMissingBean
     public AuthorizationSyncRunner authorizationSyncRunner(ApiClient igrpApiClient) {
         return new AuthorizationSyncRunner(igrpApiClient);
+    }
+
+    /**
+     * Gives every route a permission key and registers the routes with AM at startup.
+     * The startup fails when a key breaks the rules (see {@link RouteCatalog}).
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    public RouteRegistrar routeRegistrar(
+            ApplicationContext context,
+            @Value("${igrp.security.service-name:${spring.application.name:}}") String service,
+            @Value("${igrp.security.service-version:${spring.application.version:}}") String version,
+            @Value("${igrp.access.api.base-url}") String baseUrl,
+            @Value("${igrp.access.m2m.client-id:}") String clientId,
+            @Value("${igrp.access.m2m.client-secret:}") String clientSecret,
+            @Value("${igrp.access.m2m.scope:}") String scope,
+            @Value("${igrp.security.registration-timeout:10s}") Duration timeout) {
+        return new RouteRegistrar(context, service, version,
+                new RouteRegistrar.AccessManagement(baseUrl, clientId, clientSecret, scope, timeout));
     }
 }
