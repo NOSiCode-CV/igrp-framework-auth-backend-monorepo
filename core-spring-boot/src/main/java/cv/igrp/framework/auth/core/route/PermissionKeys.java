@@ -18,6 +18,10 @@ public final class PermissionKeys {
             "head", "options", "trace");
 
     private static final Pattern VERSION = Pattern.compile("v\\d+");
+    // {name}, {name:regex} (the regex may hold its own {n}), {*rest}
+    private static final Pattern VARIABLE = Pattern.compile("\\{.*?}+");
+    // separators and wildcard leftovers at either end of a segment's literal part
+    private static final Pattern EDGES = Pattern.compile("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$");
 
     private PermissionKeys() {
     }
@@ -41,8 +45,11 @@ public final class PermissionKeys {
             segments.removeFirst();
         }
 
-        boolean endsInVariable = !segments.isEmpty() && isVariable(segments.getLast());
-        List<String> resources = segments.stream().filter(s -> !isVariable(s)).toList();
+        boolean endsInVariable = !segments.isEmpty() && hasVariable(segments.getLast());
+        List<String> resources = segments.stream()
+                .map(PermissionKeys::literalPart)
+                .filter(s -> !s.isEmpty())
+                .toList();
         String resourcePath = resources.isEmpty() ? "root" : String.join(".", resources);
 
         return service + "." + resourcePath + "." + action(method, endsInVariable);
@@ -65,8 +72,15 @@ public final class PermissionKeys {
         };
     }
 
-    // {id}, {*rest} and the ** / * wildcards stand for values, not resources.
-    private static boolean isVariable(String segment) {
-        return segment.startsWith("{") || segment.equals("*") || segment.equals("**");
+    // {id}, {id:\d+}, {*rest} and the * / ** wildcards stand for values, not resources,
+    // also inside a segment (relatorio-{ano}, *.pdf). Such a segment names one item.
+    private static boolean hasVariable(String segment) {
+        return segment.indexOf('{') >= 0 || segment.indexOf('*') >= 0;
+    }
+
+    /** What a segment says about the resource: its literal text, dots turned into hyphens. */
+    private static String literalPart(String segment) {
+        String literal = VARIABLE.matcher(segment).replaceAll("").replace('*', '-').replace('.', '-');
+        return EDGES.matcher(literal).replaceAll("");
     }
 }

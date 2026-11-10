@@ -7,9 +7,12 @@ import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -39,9 +42,10 @@ public class RouteRegistrar implements SmartInitializingSingleton {
     private final String clientId;
     private final String clientSecret;
     private final String scope;
+    private final Duration timeout;
 
     public RouteRegistrar(ApplicationContext context, String service, String version,
-                          String baseUrl, String clientId, String clientSecret, String scope) {
+                          String baseUrl, String clientId, String clientSecret, String scope, Duration timeout) {
         this.context = context;
         this.service = service;
         this.version = version;
@@ -49,6 +53,7 @@ public class RouteRegistrar implements SmartInitializingSingleton {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.scope = scope;
+        this.timeout = timeout;
     }
 
     @Override
@@ -56,6 +61,11 @@ public class RouteRegistrar implements SmartInitializingSingleton {
         if (service.isBlank()) {
             throw new IllegalStateException(
                     "Permission keys need a service name: set igrp.security.service-name or spring.application.name");
+        }
+        if (version.isBlank()) {
+            throw new IllegalStateException("Route registration needs the service version, which AM uses to "
+                    + "gate deletes: set igrp.security.service-version (or package the jar with an "
+                    + "Implementation-Version, read as spring.application.version)");
         }
         RequestMappingHandlerMapping mapping =
                 context.getBean("requestMappingHandlerMapping", RequestMappingHandlerMapping.class);
@@ -68,8 +78,13 @@ public class RouteRegistrar implements SmartInitializingSingleton {
         }
         try {
             String token = new ClientCredentialsTokenProvider(baseUrl, clientId, clientSecret,
-                    scope.isBlank() ? null : scope, 30).getAccessToken();
-            Result result = RestClient.create(baseUrl).post()
+                    scope.isBlank() ? null : scope,
+                    ClientCredentialsTokenProvider.DEFAULT_REFRESH_LEEWAY_SECONDS).getAccessToken();
+            // Without a read timeout, an AM that accepts the call and never answers would hold the startup.
+            JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(
+                    HttpClient.newBuilder().connectTimeout(timeout).build());
+            requestFactory.setReadTimeout(timeout);
+            Result result = RestClient.builder().baseUrl(baseUrl).requestFactory(requestFactory).build().post()
                     .uri("/api/routes/register")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                     .contentType(MediaType.APPLICATION_JSON)

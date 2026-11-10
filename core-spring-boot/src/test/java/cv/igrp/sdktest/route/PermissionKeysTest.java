@@ -42,6 +42,17 @@ class PermissionKeysTest {
             DELETE  | /faturas/{id}                   | faturacao-api.faturas.delete
             HEAD    | /faturas                        | faturacao-api.faturas.head
             OPTIONS | /faturas/{id}                   | faturacao-api.faturas.options
+            # patterns as Spring reports them: regex variables, catch-all, wildcards
+            GET     | /faturas/{id:\\d+}              | faturacao-api.faturas.read
+            GET     | /faturas/{id:\\d{3}}/linhas     | faturacao-api.faturas.linhas.list
+            GET     | /ficheiros/{*caminho}           | faturacao-api.ficheiros.read
+            GET     | /estaticos/**                   | faturacao-api.estaticos.read
+            GET     | /estaticos/*                    | faturacao-api.estaticos.read
+            # a variable inside a segment: the literal part stays, the route reads one item
+            GET     | /relatorio-{ano}                | faturacao-api.relatorio.read
+            GET     | /ficheiros/*.pdf                | faturacao-api.ficheiros.pdf.read
+            # a dot inside a segment never adds a key segment
+            GET     | /v1/export.json                 | faturacao-api.export-json.list
             # the method may arrive in any case
             get     | /faturas                        | faturacao-api.faturas.list
             # a trailing slash does not change the key

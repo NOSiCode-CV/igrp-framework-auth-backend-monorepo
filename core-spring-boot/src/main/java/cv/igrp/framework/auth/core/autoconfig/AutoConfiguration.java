@@ -14,6 +14,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 
+import java.time.Duration;
+
 /**
  * Auto-configuration entry point for {@code cv.igrp.framework.auth:core-spring-boot}.
  *
@@ -76,11 +78,12 @@ public class AutoConfiguration {
     public RouteRegistrar routeRegistrar(
             ApplicationContext context,
             @Value("${igrp.security.service-name:${spring.application.name:}}") String service,
-            @Value("${igrp.security.service-version:${spring.application.version:unknown}}") String version,
+            @Value("${igrp.security.service-version:${spring.application.version:}}") String version,
             @Value("${igrp.access.api.base-url}") String baseUrl,
             @Value("${igrp.access.m2m.client-id:}") String clientId,
             @Value("${igrp.access.m2m.client-secret:}") String clientSecret,
-            @Value("${igrp.access.m2m.scope:}") String scope) {
-        return new RouteRegistrar(context, service, version, baseUrl, clientId, clientSecret, scope);
+            @Value("${igrp.access.m2m.scope:}") String scope,
+            @Value("${igrp.security.registration-timeout:10s}") Duration timeout) {
+        return new RouteRegistrar(context, service, version, baseUrl, clientId, clientSecret, scope, timeout);
     }
 }

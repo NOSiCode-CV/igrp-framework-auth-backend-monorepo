@@ -38,7 +38,7 @@ import java.util.Base64;
 public class ClientCredentialsTokenProvider {
 
     private static final String TOKEN_ENDPOINT_PATH = "/oauth2/token";
-    private static final long DEFAULT_REFRESH_LEEWAY_SECONDS = 30;
+    public static final long DEFAULT_REFRESH_LEEWAY_SECONDS = 30;
 
     private final String baseUrl;
     private final String clientId;
@@ -135,6 +135,7 @@ public class ClientCredentialsTokenProvider {
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + TOKEN_ENDPOINT_PATH))
+                .timeout(Duration.ofSeconds(30))
                 .header("Authorization", "Basic " + basic)
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .header("Accept", "application/json")

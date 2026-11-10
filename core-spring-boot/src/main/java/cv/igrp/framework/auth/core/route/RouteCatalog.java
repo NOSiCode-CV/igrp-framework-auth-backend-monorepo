@@ -48,8 +48,7 @@ public final class RouteCatalog {
             if (handler.getBeanType().getName().startsWith("org.springframework.")) {
                 return; // Spring Boot's own handlers, such as /error
             }
-            if (handler.hasMethodAnnotation(Public.class)
-                    || AnnotatedElementUtils.hasAnnotation(handler.getBeanType(), Public.class)) {
+            if (isPublic(handler)) {
                 return;
             }
             if (info.getMethodsCondition().getMethods().isEmpty()) {
@@ -60,11 +59,10 @@ public final class RouteCatalog {
             Permission permission = handler.getMethodAnnotation(Permission.class);
             for (RequestMethod method : info.getMethodsCondition().getMethods()) {
                 for (String path : info.getPatternValues()) {
-                    Route route = permission == null
-                            ? new Route(method.name(), path, PermissionKeys.derive(service, method.name(), path),
-                                    false, null, null)
-                            : new Route(method.name(), path, permission.value(), true,
-                                    blankToNull(permission.name()), blankToNull(permission.description()));
+                    Route route = new Route(method.name(), path, keyFor(service, handler, method.name(), path),
+                            permission != null,
+                            permission == null ? null : blankToNull(permission.name()),
+                            permission == null ? null : blankToNull(permission.description()));
                     // Handlers sharing a method and path (JSON and PDF output) are one route.
                     Route existing = routes.putIfAbsent(route.label(), route);
                     if (existing != null && !existing.key().equals(route.key())) {
@@ -84,7 +82,8 @@ public final class RouteCatalog {
                     if (sharing.size() > 1) {
                         errors.add("key " + key + " is used by more than one route: "
                                 + sharing.stream().map(Route::label).collect(Collectors.joining(", "))
-                                + ". Give each route its own @Permission key.");
+                                + ". Give each route its own @Permission key; a handler that maps several "
+                                + "paths or methods under one @Permission must be split into one handler per route.");
                     }
                 });
 
@@ -93,6 +92,22 @@ public final class RouteCatalog {
                     + String.join("\n - ", errors));
         }
         return List.copyOf(routes.values());
+    }
+
+    /**
+     * The key of one route of a handler: its {@link Permission} key if it has one, otherwise the
+     * key derived from the method and the matched path pattern. Registration and the per-request
+     * check both use this, so they always agree.
+     */
+    public static String keyFor(String service, HandlerMethod handler, String method, String pathPattern) {
+        Permission permission = handler.getMethodAnnotation(Permission.class);
+        return permission != null ? permission.value() : PermissionKeys.derive(service, method, pathPattern);
+    }
+
+    /** {@link Public} on the handler method or on its controller. */
+    public static boolean isPublic(HandlerMethod handler) {
+        return handler.hasMethodAnnotation(Public.class)
+                || AnnotatedElementUtils.hasAnnotation(handler.getBeanType(), Public.class);
     }
 
     private static void checkAnnotatedKey(String service, Route route, List<String> errors) {
