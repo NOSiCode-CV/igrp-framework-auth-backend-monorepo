@@ -38,6 +38,9 @@
         <project.build.sourceEncoding>${igrp.encoding}</project.build.sourceEncoding>
         <project.reporting.outputEncoding>${igrp.encoding}</project.reporting.outputEncoding>
         <spring-boot.version>4.1.2</spring-boot.version>
+        <!-- Java 26 needs JaCoCo >= 0.8.15 (older agents cannot instrument
+             class file version 70). -->
+        <jacoco.version>0.8.16</jacoco.version>
     </properties>
 
     <!--
@@ -57,6 +60,36 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <!--
+        Test coverage for every module: the JaCoCo agent runs with the tests and
+        `verify` writes <module>/target/site/jacoco/jacoco.xml, which SonarQube
+        imports (CI: maven-test → sonar-sast).
+    -->
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
     <scm>
         <url>http://git.nosi.cv/igrp-3_0/igrp-framework-auth-backend-monorepo</url>

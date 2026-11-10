@@ -1,6 +1,160 @@
+# =============================================
+#  DevSecOps "code review" (gitlab-ci-templates da NOSI, stages à-la-carte)
+#
+#  test ──────────► sast
+#  mvn verify       SonarQube (análise + Quality Gate)
+#  + JaCoCo         importa o jacoco.xml de cada módulo
+#
+#  MODO RIGOROSO (bloqueante) — a pipeline FALHA se:
+#    - algum teste falhar (todos os módulos do reactor);
+#    - o Quality Gate do SonarQube falhar.
+#  Se o maven-test falhar, o sonar-sast não corre (needs).
+#
+#  Pipelines:
+#    MR  feature/* → development      → code review (projeto Sonar *-dev)
+#    MR  para outras branches         → só `mr-gate` (passa sempre; o projeto
+#                                       exige "Pipelines must succeed")
+#    branch development               → code review após o merge
+#    branch feature/devsecops-*       → validação deste CI
+#    branch github-release            → só o trigger-deploy (inalterado)
+#
+#  Variáveis CI/CD (grupo IGRP 3.0): SONAR_HOST_URL/TOKEN.
+# =============================================
+
+include:
+  - project: 'devsecops/gitlab-ci-templates'
+    ref: 'v4.0.0-rc.9'
+    file:
+      - '/templates/stages/test.yml'
+      - '/templates/stages/sast.yml'
+
+variables:
+  # --- DevSecOps: projeto SonarQube (Community não separa branches) ---
+  SONAR_KEY: "igrp-framework-auth-backend-dev"
+
+  # --- DevSecOps: Maven ---
+  # - JaCoCo (0.8.16, Java 26) vem do pom raiz, para todos os módulos.
+  # - stdout dos testes → <módulo>/target/surefire-reports/*-output.txt.
+  MAVEN_OPTS: >-
+    -Dhttps.protocols=TLSv1.2
+    -Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository
+    -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN
+    -Dorg.slf4j.simpleLogger.showDateTime=true
+    -Djava.awt.headless=true
+  MAVEN_CLI_OPTS: >-
+    --batch-mode
+    --errors
+    --fail-at-end
+    --show-version
+    -Dmaven.test.redirectTestOutputToFile=true
+    -Dsonar.projectKey=$SONAR_KEY
+
+  # --- DevSecOps: gates BLOQUEANTES ---
+  MAVEN_TEST_ALLOW_FAILURE: "false"   # testes
+  SAST_ALLOW_FAILURE: "false"         # Quality Gate do SonarQube
+
+  # Runner do maven-test (tags: [$RUNNER_DEFAULT_TAG]). No template esta
+  # variável só é definida no secrets.yml, que aqui não é incluído.
+  RUNNER_DEFAULT_TAG: "nosi-runner"
+
+# Cache .m2 partilhada pelos jobs Maven do DevSecOps
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+  paths:
+    - .m2/repository
+
+# PIPELINE_KIND marca as pipelines sem code review:
+#   mr-gate → MRs que não vão para a development (pipeline mínima)
+#   release → branch github-release (só o trigger-deploy)
+# O MR da própria branch devsecops não tem pipeline: a da branch já corre tudo.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^feature\/devsecops-/
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "development"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      variables:
+        PIPELINE_KIND: "mr-gate"
+    - if: $CI_COMMIT_BRANCH == "development"
+    - if: $CI_COMMIT_BRANCH =~ /^feature\/devsecops-/
+    - if: $CI_COMMIT_BRANCH == "github-release"
+      variables:
+        PIPELINE_KIND: "release"
+
+# maven-test (template), ajustado a multi-módulo:
+# - relatórios em <módulo>/target (o template só lê target/ da raiz);
+# - cobertura total = soma dos jacoco.csv de todos os módulos (o GitLab usa a
+#   última linha "Total coverage" do log);
+# - regras do template + não corre nas pipelines mr-gate/release;
+# - DinD para os testes com Testcontainers (ex. harness do core-spring-boot,
+#   que sobe um Redis).
+maven-test:
+  services:
+    - name: docker:28.2.2-dind
+      alias: docker
+      command: [ "--tls=false", "--mtu=1240" ]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    TESTCONTAINERS_HOST_OVERRIDE: docker
+    TESTCONTAINERS_RYUK_DISABLED: "true"
+  rules:
+    - if: $PIPELINE_KIND
+      when: never
+    - if: $MAVEN_TEST_ALLOW_FAILURE == "true"
+      allow_failure: true
+    - when: on_success
+      allow_failure: false
+  after_script:
+    - |
+      CSVS=$(ls */target/site/jacoco/jacoco.csv 2>/dev/null)
+      if [ -n "$CSVS" ]; then
+        awk -F',' 'FNR>1 { miss += $4; cov += $5 } END { t = miss + cov; printf "Total coverage: %.2f%% (todos os módulos)\n", (t > 0 ? cov / t * 100 : 0) }' $CSVS
+      fi
+  artifacts:
+    name: "$CI_PROJECT_NAME-tests-$CI_COMMIT_SHORT_SHA"
+    when: always
+    expire_in: 1 week
+    paths:
+      - "*/target/surefire-reports/"
+      - "*/target/site/jacoco/"
+      - target/bom.json
+    reports:
+      junit:
+        - "*/target/surefire-reports/TEST-*.xml"
+
+# Mesmas regras do template (sast.yml) + não corre nas pipelines mr-gate/release.
+sonar-sast:
+  rules:
+    - if: $PIPELINE_KIND
+      when: never
+    - if: $SAST_ALLOW_FAILURE == "true"
+      allow_failure: true
+    - when: on_success
+
+# Pipeline mínima dos MRs que não vão para a development: passa sempre, em
+# segundos (sem clone nem cache), só para o MR ter uma pipeline verde.
+mr-gate:
+  stage: test
+  image: alpine:3.20
+  tags:
+    - $RUNNER_DEFAULT_TAG
+  variables:
+    GIT_STRATEGY: none
+  cache: []
+  rules:
+    - if: $PIPELINE_KIND == "mr-gate"
+  script:
+    - 'echo "MR $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME → $CI_MERGE_REQUEST_TARGET_BRANCH_NAME: o code review corre à entrada da development."'
+
 stages:
+  - test
+  - sast
   - trigger-deploy
 
+# =============================================
+#  Release (inalterado): branch github-release → dispara o deploy Maven.
+# =============================================
 trigger-deploy:
   image: alpine
   stage: trigger-deploy

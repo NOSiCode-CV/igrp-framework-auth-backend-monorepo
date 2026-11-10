@@ -19,7 +19,6 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>26</java.version>
-        <jacoco.version>0.8.16</jacoco.version>
     </properties>
 
     <dependencies>
