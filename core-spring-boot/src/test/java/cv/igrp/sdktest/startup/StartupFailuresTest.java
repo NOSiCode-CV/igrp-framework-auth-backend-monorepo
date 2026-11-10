@@ -18,7 +18,9 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -79,9 +81,13 @@ class StartupFailuresTest {
         am.setExecutor(Executors.newCachedThreadPool());
         am.createContext("/oauth2/token", exchange -> respond(exchange,
                 "{\"access_token\":\"t\",\"token_type\":\"Bearer\",\"expires_in\":300}"));
+        CountDownLatch neverAnswered = new CountDownLatch(1);
         am.createContext("/api/routes/register", exchange -> {
             try {
-                Thread.sleep(Duration.ofSeconds(30));
+                // Holds the call open; released only when the test ends.
+                boolean released = neverAnswered.await(30, TimeUnit.SECONDS);
+                exchange.sendResponseHeaders(released ? 503 : 504, -1);
+                exchange.close();
             } catch (InterruptedException ignored) {
                 Thread.currentThread().interrupt();
             }
@@ -98,6 +104,7 @@ class StartupFailuresTest {
             Duration took = Duration.ofNanos(System.nanoTime() - started);
             assertTrue(took.compareTo(Duration.ofSeconds(20)) < 0, "startup took " + took);
         } finally {
+            neverAnswered.countDown();
             am.stop(0);
         }
     }

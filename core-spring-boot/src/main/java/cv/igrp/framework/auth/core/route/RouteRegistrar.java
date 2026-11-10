@@ -35,25 +35,28 @@ public class RouteRegistrar implements SmartInitializingSingleton {
     public record Result(Integer created, Integer unchanged, Integer deleted, Integer renamed) {
     }
 
+    /**
+     * How to reach AM: its base URL, the service's {@code client_credentials} (blank client id or
+     * secret skips the registration) and the connect/read timeout of the registration call.
+     */
+    public record AccessManagement(String baseUrl, String clientId, String clientSecret, String scope,
+                                   Duration timeout) {
+
+        boolean hasCredentials() {
+            return !clientId.isBlank() && !clientSecret.isBlank();
+        }
+    }
+
     private final ApplicationContext context;
     private final String service;
     private final String version;
-    private final String baseUrl;
-    private final String clientId;
-    private final String clientSecret;
-    private final String scope;
-    private final Duration timeout;
+    private final AccessManagement am;
 
-    public RouteRegistrar(ApplicationContext context, String service, String version,
-                          String baseUrl, String clientId, String clientSecret, String scope, Duration timeout) {
+    public RouteRegistrar(ApplicationContext context, String service, String version, AccessManagement am) {
         this.context = context;
         this.service = service;
         this.version = version;
-        this.baseUrl = baseUrl;
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
-        this.scope = scope;
-        this.timeout = timeout;
+        this.am = am;
     }
 
     @Override
@@ -71,20 +74,20 @@ public class RouteRegistrar implements SmartInitializingSingleton {
                 context.getBean("requestMappingHandlerMapping", RequestMappingHandlerMapping.class);
         List<RouteCatalog.Route> routes = RouteCatalog.collect(service, mapping.getHandlerMethods());
 
-        if (clientId.isBlank() || clientSecret.isBlank()) {
+        if (!am.hasCredentials()) {
             LOGGER.warn("[Route Registration] igrp.access.m2m.client-id / client-secret not set: "
                     + "{} routes of '{}' not registered with Access Management.", routes.size(), service);
             return;
         }
         try {
-            String token = new ClientCredentialsTokenProvider(baseUrl, clientId, clientSecret,
-                    scope.isBlank() ? null : scope,
+            String token = new ClientCredentialsTokenProvider(am.baseUrl(), am.clientId(), am.clientSecret(),
+                    am.scope().isBlank() ? null : am.scope(),
                     ClientCredentialsTokenProvider.DEFAULT_REFRESH_LEEWAY_SECONDS).getAccessToken();
             // Without a read timeout, an AM that accepts the call and never answers would hold the startup.
             JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(
-                    HttpClient.newBuilder().connectTimeout(timeout).build());
-            requestFactory.setReadTimeout(timeout);
-            Result result = RestClient.builder().baseUrl(baseUrl).requestFactory(requestFactory).build().post()
+                    HttpClient.newBuilder().connectTimeout(am.timeout()).build());
+            requestFactory.setReadTimeout(am.timeout());
+            Result result = RestClient.builder().baseUrl(am.baseUrl()).requestFactory(requestFactory).build().post()
                     .uri("/api/routes/register")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                     .contentType(MediaType.APPLICATION_JSON)

@@ -84,6 +84,7 @@ public class AutoConfiguration {
             @Value("${igrp.access.m2m.client-secret:}") String clientSecret,
             @Value("${igrp.access.m2m.scope:}") String scope,
             @Value("${igrp.security.registration-timeout:10s}") Duration timeout) {
-        return new RouteRegistrar(context, service, version, baseUrl, clientId, clientSecret, scope, timeout);
+        return new RouteRegistrar(context, service, version,
+                new RouteRegistrar.AccessManagement(baseUrl, clientId, clientSecret, scope, timeout));
     }
 }

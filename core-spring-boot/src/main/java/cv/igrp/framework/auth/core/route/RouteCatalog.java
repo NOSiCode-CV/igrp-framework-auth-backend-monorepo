@@ -45,37 +45,55 @@ public final class RouteCatalog {
         List<String> errors = new ArrayList<>();
 
         handlers.forEach((info, handler) -> {
-            if (handler.getBeanType().getName().startsWith("org.springframework.")) {
-                return; // Spring Boot's own handlers, such as /error
-            }
-            if (isPublic(handler)) {
-                return;
-            }
-            if (info.getMethodsCondition().getMethods().isEmpty()) {
-                LOGGER.warn("[Route Registration] {} maps no HTTP method and gets no permission key; "
-                        + "declare the method (@GetMapping, @PostMapping, ...) to register it.", handler);
-                return;
-            }
-            Permission permission = handler.getMethodAnnotation(Permission.class);
-            for (RequestMethod method : info.getMethodsCondition().getMethods()) {
-                for (String path : info.getPatternValues()) {
-                    Route route = new Route(method.name(), path, keyFor(service, handler, method.name(), path),
-                            permission != null,
-                            permission == null ? null : blankToNull(permission.name()),
-                            permission == null ? null : blankToNull(permission.description()));
-                    // Handlers sharing a method and path (JSON and PDF output) are one route.
-                    Route existing = routes.putIfAbsent(route.label(), route);
-                    if (existing != null && !existing.key().equals(route.key())) {
-                        errors.add(route.label() + " has handlers with different keys: "
-                                + existing.key() + " and " + route.key());
-                    }
-                }
+            if (isRegistered(info, handler)) {
+                addRoutes(service, info, handler, routes, errors);
             }
         });
-
         routes.values().stream()
                 .filter(Route::annotated)
                 .forEach(route -> checkAnnotatedKey(service, route, errors));
+        checkOneRoutePerKey(routes, errors);
+
+        if (!errors.isEmpty()) {
+            throw new IllegalStateException("Invalid permission keys in service '" + service + "':\n - "
+                    + String.join("\n - ", errors));
+        }
+        return List.copyOf(routes.values());
+    }
+
+    /** Spring Boot's own handlers (such as /error), public routes and method-less mappings get no key. */
+    private static boolean isRegistered(RequestMappingInfo info, HandlerMethod handler) {
+        if (handler.getBeanType().getName().startsWith("org.springframework.") || isPublic(handler)) {
+            return false;
+        }
+        if (info.getMethodsCondition().getMethods().isEmpty()) {
+            LOGGER.warn("[Route Registration] {} maps no HTTP method and gets no permission key; "
+                    + "declare the method (@GetMapping, @PostMapping, ...) to register it.", handler);
+            return false;
+        }
+        return true;
+    }
+
+    /** One route per HTTP method and path of the handler; handlers sharing both (JSON and PDF) are one route. */
+    private static void addRoutes(String service, RequestMappingInfo info, HandlerMethod handler,
+                                  Map<String, Route> routes, List<String> errors) {
+        Permission permission = handler.getMethodAnnotation(Permission.class);
+        String name = permission == null ? null : blankToNull(permission.name());
+        String description = permission == null ? null : blankToNull(permission.description());
+        for (RequestMethod method : info.getMethodsCondition().getMethods()) {
+            for (String path : info.getPatternValues()) {
+                Route route = new Route(method.name(), path, keyFor(service, handler, method.name(), path),
+                        permission != null, name, description);
+                Route existing = routes.putIfAbsent(route.label(), route);
+                if (existing != null && !existing.key().equals(route.key())) {
+                    errors.add(route.label() + " has handlers with different keys: "
+                            + existing.key() + " and " + route.key());
+                }
+            }
+        }
+    }
+
+    private static void checkOneRoutePerKey(Map<String, Route> routes, List<String> errors) {
         routes.values().stream()
                 .collect(Collectors.groupingBy(Route::key, TreeMap::new, Collectors.toList()))
                 .forEach((key, sharing) -> {
@@ -86,12 +104,6 @@ public final class RouteCatalog {
                                 + "paths or methods under one @Permission must be split into one handler per route.");
                     }
                 });
-
-        if (!errors.isEmpty()) {
-            throw new IllegalStateException("Invalid permission keys in service '" + service + "':\n - "
-                    + String.join("\n - ", errors));
-        }
-        return List.copyOf(routes.values());
     }
 
     /**
