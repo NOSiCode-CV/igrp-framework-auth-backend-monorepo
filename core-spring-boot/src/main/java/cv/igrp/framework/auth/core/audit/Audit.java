@@ -5,6 +5,7 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -29,8 +30,9 @@ import java.util.UUID;
  * <p>The starter fills in the rest: the user ({@code sub} of the token, or {@code system}
  * outside a request), this service's name, the agent ({@code act.sub} of a token-exchange
  * token), the time, the result and the trace id. The event and its outbox row are written
- * in the caller's transaction (a new one if there is none), so a rolled-back action leaves
- * no event and a committed one always has its event.
+ * in the caller's transaction, so a rolled-back action leaves no event and a committed one
+ * always has its event. Calling it outside a transaction fails: there is no action to tie
+ * the event to.
  *
  * <p>The result is always {@value #SUCCESS}: an event only survives when the action commits.
  */
@@ -71,7 +73,8 @@ public class Audit {
      * @param event    what happened, e.g. {@code fatura.aprovada}
      * @param resource what it happened to, e.g. {@code faturas/42}
      * @param payload  details, serialised as JSON; may be {@code null}
-     * @throws IllegalStateException when the audit tables are not available (not PostgreSQL)
+     * @throws IllegalStateException when the audit tables are not available (not PostgreSQL),
+     *                               or when no transaction is active
      */
     // "record" is the API name in the v3 spec (audit.record); as a method name it is legal Java.
     @SuppressWarnings("java:S6213")
@@ -90,12 +93,17 @@ public class Audit {
         String payloadJson = payload == null ? null : json.writeValueAsString(payload);
         String eventJson = json.writeValueAsString(recorded);
 
-        transactions.executeWithoutResult(status -> {
-            jdbc.update(INSERT_EVENT, recorded.id(), recorded.event(), recorded.resource(), payloadJson,
-                    recorded.username(), recorded.service(), recorded.agent(), recorded.result(),
-                    recorded.traceId(), at);
-            jdbc.update(INSERT_OUTBOX, UUID.randomUUID(), recorded.id(), eventJson, at);
-        });
+        try {
+            transactions.executeWithoutResult(status -> {
+                jdbc.update(INSERT_EVENT, recorded.id(), recorded.event(), recorded.resource(), payloadJson,
+                        recorded.username(), recorded.service(), recorded.agent(), recorded.result(),
+                        recorded.traceId(), at);
+                jdbc.update(INSERT_OUTBOX, UUID.randomUUID(), recorded.id(), eventJson, at);
+            });
+        } catch (IllegalTransactionStateException e) {
+            throw new IllegalStateException("audit.record must run inside the action's transaction "
+                    + "(for example a @Transactional method), so the event commits or rolls back with it", e);
+        }
     }
 
     private static String username(Authentication authentication) {

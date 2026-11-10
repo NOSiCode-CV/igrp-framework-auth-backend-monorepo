@@ -51,7 +51,6 @@ public class AuditSchema implements InitializingBean {
                 return;
             }
             role = appRole.isBlank() ? connection.getMetaData().getUserName() : appRole;
-            checkRoleName(role);
             warnIfSuperuser(connection, role);
         } catch (SQLException e) {
             throw new IllegalStateException("Could not inspect the database for the iGRP business audit", e);
@@ -63,9 +62,11 @@ public class AuditSchema implements InitializingBean {
                 .table(HISTORY_TABLE)
                 .baselineOnMigrate(true)
                 .baselineVersion("0")
-                .placeholders(Map.of("appRole", role))
+                // The role goes into GRANT statements inside double quotes: double any quote it holds.
+                .placeholders(Map.of("appRole", role.replace("\"", "\"\"")))
                 .load()
                 .migrate();
+        warnIfOwner(role);
         unavailableReason = null;
     }
 
@@ -74,16 +75,21 @@ public class AuditSchema implements InitializingBean {
         return unavailableReason;
     }
 
-    // The role goes into GRANT statements as a quoted identifier: accept plain names only.
-    private static void checkRoleName(String role) {
-        boolean valid = !role.isEmpty() && role.length() <= 63;
-        for (int i = 0; valid && i < role.length(); i++) {
-            char c = role.charAt(i);
-            valid = Character.isLetterOrDigit(c) || c == '_';
-        }
-        if (!valid) {
-            throw new IllegalStateException("igrp.audit.app-role must be a plain PostgreSQL role name "
-                    + "(letters, digits, _; at most 63), got '" + role + "'");
+    // The owner of a table can grant itself back what was revoked: append-only then holds only
+    // while nobody does that. Say so, so production can split the migration and application roles.
+    private void warnIfOwner(String role) {
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT tableowner FROM pg_tables WHERE tablename = 'audit_event' AND schemaname = current_schema()")) {
+            try (ResultSet rs = statement.executeQuery()) {
+                if (rs.next() && role.equals(rs.getString(1))) {
+                    LOGGER.warn("[Audit] The application role '{}' owns audit_event, so it could grant itself UPDATE "
+                            + "and DELETE again. For a strict append-only audit, run migrations with another role "
+                            + "and set igrp.audit.app-role to the application's role.", role);
+                }
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Could not check the owner of audit_event", e);
         }
     }
 

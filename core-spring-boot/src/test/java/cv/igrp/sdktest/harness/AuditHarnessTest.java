@@ -58,6 +58,7 @@ class AuditHarnessTest extends AbstractStarterTest {
         registry.add("spring.datasource.username", () -> "app_user");
         registry.add("spring.datasource.password", () -> "app");
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+        registry.add("spring.flyway.enabled", () -> "true");
     }
 
     @Autowired
@@ -120,6 +121,26 @@ class AuditHarnessTest extends AbstractStarterTest {
         assertEquals("system", event.get("username"));
         assertNull(event.get("agent"));
         assertNotNull(event.get("trace_id"));
+    }
+
+    @Test
+    @DisplayName("Recording outside a transaction fails and writes nothing")
+    void withoutTransaction() {
+        String resource = "faturas/" + UUID.randomUUID();
+        Map<String, Object> payload = Map.of();
+
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> audit.record("fatura.aprovada", resource, payload));
+        assertTrue(failure.getMessage().contains("transaction"), failure.getMessage());
+        assertEquals(0, count("SELECT count(*) FROM audit_event WHERE resource = ?", resource));
+    }
+
+    @Test
+    @DisplayName("On a fresh database the service's own Flyway and the audit's each keep their own history")
+    void besideTheServicesFlyway() {
+        assertEquals(1, count("SELECT count(*) FROM flyway_schema_history WHERE version = '1' AND success"));
+        assertEquals(1, count("SELECT count(*) FROM igrp_audit_schema_history WHERE version = '1' AND success"));
+        assertEquals(0, count("SELECT count(*) FROM service_invoice"));
     }
 
     @Test
