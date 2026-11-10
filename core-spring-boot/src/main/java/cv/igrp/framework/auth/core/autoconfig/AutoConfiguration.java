@@ -1,5 +1,6 @@
 package cv.igrp.framework.auth.core.autoconfig;
 
+import cv.igrp.framework.auth.core.audit.CorrelationIds;
 import cv.igrp.framework.auth.core.security.AuthenticationHelper;
 import cv.igrp.framework.auth.core.security.IAuthorizationServiceAdapter;
 import cv.igrp.framework.auth.core.security.IgrpAuthorizationService;
@@ -36,6 +37,8 @@ public class AutoConfiguration {
     public ApiClient apiClient(@Value("${igrp.access.api.base-url}") String baseUrl) {
         ApiClient client = new ApiClient();
         client.setBaseUrl(baseUrl);
+        // v3-24: calls to AM carry the caller's traceparent and X-Correlation-ID.
+        client.setDefaultHeaders(CorrelationIds::outgoingHeaders);
         return client;
     }
 

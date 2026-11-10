@@ -51,6 +51,32 @@
             <scope>test</scope>
         </dependency>
 
+        <!--
+          v3-24 (#31): correlation id and Envers revision. Optional: a service that
+          has none of these gets neither the trace id nor the revision, and the
+          starter still starts (both are guarded by classpath checks).
+        -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-envers</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Spring Security Dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
