@@ -85,8 +85,19 @@ workflow:
 # - relatórios em <módulo>/target (o template só lê target/ da raiz);
 # - cobertura total = soma dos jacoco.csv de todos os módulos (o GitLab usa a
 #   última linha "Total coverage" do log);
-# - regras do template + não corre nas pipelines mr-gate/release.
+# - regras do template + não corre nas pipelines mr-gate/release;
+# - DinD para os testes com Testcontainers (ex. harness do core-spring-boot,
+#   que sobe um Redis).
 maven-test:
+  services:
+    - name: docker:28.2.2-dind
+      alias: docker
+      command: [ "--tls=false", "--mtu=1240" ]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    TESTCONTAINERS_HOST_OVERRIDE: docker
+    TESTCONTAINERS_RYUK_DISABLED: "true"
   rules:
     - if: $PIPELINE_KIND
       when: never
