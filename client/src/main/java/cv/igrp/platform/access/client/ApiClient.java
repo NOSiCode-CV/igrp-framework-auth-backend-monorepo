@@ -236,7 +236,11 @@ public class ApiClient implements IApiClient {
     }
 
     private void applyDefaultHeaders(HttpRequest.Builder builder, Map<String, String> headerParams) {
-        defaultHeaders.get().forEach((name, value) -> {
+        Map<String, String> headers = defaultHeaders.get();
+        if (headers == null) {
+            return;
+        }
+        headers.forEach((name, value) -> {
             if (headerParams == null || headerParams.keySet().stream().noneMatch(name::equalsIgnoreCase)) {
                 builder.header(name, value);
             }

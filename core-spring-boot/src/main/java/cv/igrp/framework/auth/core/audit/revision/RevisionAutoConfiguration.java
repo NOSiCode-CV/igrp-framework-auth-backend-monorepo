@@ -10,8 +10,12 @@ import org.springframework.context.annotation.Bean;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
 
 /**
  * v3-24 (#31): makes {@link IgrpRevision} the Envers revision of any service
@@ -22,7 +26,9 @@ import java.sql.Statement;
  * either of the two things a service must do is missing: the revision entity
  * in its entity scan (an explicit {@code @EntityScan} replaces the default), or
  * the {@code username} and {@code trace_id} columns in {@code revinfo}. Set
- * {@code igrp.audit.revision.enabled=false} to keep Hibernate's default revision.
+ * {@code igrp.audit.revision.enabled=false} to keep Hibernate's default revision,
+ * for example in a service that has Envers on its classpath without using it,
+ * or that defines its own {@code @RevisionEntity} (Envers allows only one).
  */
 @org.springframework.boot.autoconfigure.AutoConfiguration
 @ConditionalOnClass(name = {"org.hibernate.envers.RevisionEntity", "jakarta.persistence.EntityManagerFactory"})
@@ -38,7 +44,7 @@ public class RevisionAutoConfiguration {
                                                  ObjectProvider<DataSource> dataSource) {
         return () -> entityManagerFactory.ifAvailable(emf -> {
             checkEntityScan(emf);
-            dataSource.ifAvailable(RevisionAutoConfiguration::checkColumns);
+            dataSource.ifAvailable(ds -> checkColumns(emf, ds));
         });
     }
 
@@ -53,14 +59,32 @@ public class RevisionAutoConfiguration {
         }
     }
 
-    private static void checkColumns(DataSource dataSource) {
-        try (Connection connection = dataSource.getConnection();
-             Statement statement = connection.createStatement()) {
-            statement.execute("SELECT username, trace_id FROM revinfo WHERE 1 = 0");
+    /**
+     * Fails when {@code revinfo} lacks the two columns. Matters under
+     * {@code ddl-auto=none}: with {@code validate} Hibernate reports the missing
+     * column itself, and with {@code update} it adds them. Reads the catalog,
+     * so it honours {@code hibernate.default_schema}.
+     */
+    private static void checkColumns(EntityManagerFactory emf, DataSource dataSource) {
+        Object configured = emf.getProperties().get("hibernate.default_schema");
+        try (Connection connection = dataSource.getConnection()) {
+            String schema = configured instanceof String name && !name.isBlank() ? name : connection.getSchema();
+            Set<String> columns = new HashSet<>();
+            DatabaseMetaData metaData = connection.getMetaData();
+            for (String table : new String[]{"revinfo", "REVINFO"}) {
+                try (ResultSet rs = metaData.getColumns(connection.getCatalog(), schema, table, null)) {
+                    while (rs.next()) {
+                        columns.add(rs.getString("COLUMN_NAME").toLowerCase(Locale.ROOT));
+                    }
+                }
+            }
+            if (!columns.containsAll(Set.of("username", "trace_id"))) {
+                throw new IllegalStateException("The revinfo table lacks the iGRP revision columns. "
+                        + "Add them in a migration: " + COLUMNS_FIX
+                        + " (or set igrp.audit.revision.enabled=false).");
+            }
         } catch (SQLException e) {
-            throw new IllegalStateException("The revinfo table lacks the iGRP revision columns. "
-                    + "Add them in a migration: " + COLUMNS_FIX
-                    + " (or set igrp.audit.revision.enabled=false).", e);
+            throw new IllegalStateException("Could not check the revinfo columns of the iGRP revision", e);
         }
     }
 }

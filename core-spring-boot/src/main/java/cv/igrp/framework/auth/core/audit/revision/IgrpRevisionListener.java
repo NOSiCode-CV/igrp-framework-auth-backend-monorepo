@@ -20,7 +20,8 @@ public class IgrpRevisionListener implements RevisionListener {
     public void newRevision(Object revisionEntity) {
         IgrpRevision revision = (IgrpRevision) revisionEntity;
         revision.setUsername(currentUsername());
-        revision.setTraceId(CorrelationIds.current().orElse(null));
+        // Outside a request (schedulers, startup) the change still gets an id of its own.
+        revision.setTraceId(CorrelationIds.current().orElseGet(() -> CorrelationIds.resolve(null)));
     }
 
     /** {@code preferred_username}, else the subject or principal name, else {@link #SYSTEM}. */

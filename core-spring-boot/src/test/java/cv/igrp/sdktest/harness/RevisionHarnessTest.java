@@ -10,9 +10,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Map;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -59,16 +61,16 @@ class RevisionHarnessTest extends AbstractStarterTest {
     }
 
     @Test
-    @DisplayName("A change outside any request is made by 'system' and has no trace id")
+    @DisplayName("A change outside any request is made by 'system' and still gets an id")
     void backgroundRevisionIsSystem() {
-        Long id = tx.execute(status -> notes.save(new Note("from a scheduler")).getId());
+        Long id = Objects.requireNonNull(tx.execute(status -> notes.save(new Note("from a scheduler")).getId()));
 
-        assertThat(revisionOf(id))
-                .containsEntry("USERNAME", "system")
-                .containsEntry("TRACE_ID", null);
+        Map<String, Object> revision = revisionOf(id);
+        assertThat(revision).containsEntry("USERNAME", "system");
+        assertThat(revision.get("TRACE_ID")).asString().matches("[0-9a-f]{32}");
     }
 
-    private long createNote(org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request)
+    private long createNote(MockHttpServletRequestBuilder request)
             throws Exception {
         String body = mvc.perform(request.content("hello")
                         .with(jwt().jwt(token -> token.claim("preferred_username", "alice")))

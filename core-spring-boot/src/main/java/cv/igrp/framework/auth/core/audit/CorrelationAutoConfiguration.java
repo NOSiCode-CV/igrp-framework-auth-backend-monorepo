@@ -23,6 +23,8 @@ public class CorrelationAutoConfiguration {
     public FilterRegistrationBean<CorrelationIdFilter> igrpCorrelationIdFilter() {
         FilterRegistrationBean<CorrelationIdFilter> registration = new FilterRegistrationBean<>(new CorrelationIdFilter());
         registration.setOrder(ORDER);
+        // Distinct from a service's own correlation filter (AM registers one until it adopts the starter).
+        registration.setName("igrpCorrelationIdFilter");
         return registration;
     }
 }

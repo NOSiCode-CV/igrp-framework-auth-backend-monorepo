@@ -76,6 +76,15 @@ class ApiClientDefaultHeadersTest {
         assertNull(header("X-Correlation-ID"));
     }
 
+    @Test
+    void aSupplierThatReturnsNullAddsNothing() throws Exception {
+        client.setDefaultHeaders(() -> null);
+
+        client.invokeAPIRaw("/echo", "GET", Map.of(), null, Map.of());
+
+        assertNull(header("X-Correlation-ID"));
+    }
+
     private List<String> header(String name) {
         return received.get().entrySet().stream()
                 .filter(e -> e.getKey().equalsIgnoreCase(name))
