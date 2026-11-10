@@ -13,6 +13,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class ApiClient implements IApiClient {
     private final HttpClient httpClient;
@@ -22,6 +23,7 @@ public class ApiClient implements IApiClient {
     private String authToken;
     private ClientCredentialsTokenProvider clientCredentialsTokenProvider;
     private final int timeout = 30;
+    private Supplier<Map<String, String>> defaultHeaders = Map::of;
 
     public ApiClient() {
         this.httpClient = HttpClient.newBuilder()
@@ -107,6 +109,7 @@ public class ApiClient implements IApiClient {
             if (authToken != null) {
                 builder.header("Authorization", "Bearer " + authToken);
             }
+            applyDefaultHeaders(builder, headerParams);
             if (headerParams != null) {
                 headerParams.forEach(builder::header);
             }
@@ -190,6 +193,7 @@ public class ApiClient implements IApiClient {
             builder.header("Authorization", "Bearer " + authToken);
         }
 
+        applyDefaultHeaders(builder, headerParams);
         if (headerParams != null) {
             headerParams.forEach(builder::header);
         }
@@ -221,6 +225,23 @@ public class ApiClient implements IApiClient {
 
     public String getBaseUrl() { return baseUrl; }
     public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
+
+    /**
+     * Headers added to every request, read again on each call (for example the
+     * caller's trace and correlation ids). Per-call {@code headerParams} with the
+     * same name replace them.
+     */
+    public void setDefaultHeaders(Supplier<Map<String, String>> defaultHeaders) {
+        this.defaultHeaders = defaultHeaders == null ? Map::of : defaultHeaders;
+    }
+
+    private void applyDefaultHeaders(HttpRequest.Builder builder, Map<String, String> headerParams) {
+        defaultHeaders.get().forEach((name, value) -> {
+            if (headerParams == null || headerParams.keySet().stream().noneMatch(name::equalsIgnoreCase)) {
+                builder.header(name, value);
+            }
+        });
+    }
     public String getAuthToken() { return authToken; }
     public void setAuthToken(String authToken) { this.authToken = authToken; }
 
