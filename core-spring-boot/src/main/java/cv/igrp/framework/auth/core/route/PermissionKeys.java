@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 /**
  * The key convention, {@code {service}.{resource path}.{action}}: one pure function,
@@ -16,12 +15,6 @@ public final class PermissionKeys {
     public static final Set<String> ACTIONS = Set.of(
             "list", "read", "create", "update-all", "update", "patch-all", "patch", "delete-all", "delete",
             "head", "options", "trace");
-
-    private static final Pattern VERSION = Pattern.compile("v\\d+");
-    // {name}, {name:regex} (the regex may hold its own {n}), {*rest}
-    private static final Pattern VARIABLE = Pattern.compile("\\{.*?}+");
-    // separators and wildcard leftovers at either end of a segment's literal part
-    private static final Pattern EDGES = Pattern.compile("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$");
 
     private PermissionKeys() {
     }
@@ -41,7 +34,7 @@ public final class PermissionKeys {
         if (!segments.isEmpty() && segments.getFirst().equals("api")) {
             segments.removeFirst();
         }
-        if (!segments.isEmpty() && VERSION.matcher(segments.getFirst()).matches()) {
+        if (!segments.isEmpty() && isVersion(segments.getFirst())) {
             segments.removeFirst();
         }
 
@@ -78,9 +71,44 @@ public final class PermissionKeys {
         return segment.indexOf('{') >= 0 || segment.indexOf('*') >= 0;
     }
 
-    /** What a segment says about the resource: its literal text, dots turned into hyphens. */
+    /**
+     * What a segment says about the resource: its text outside {@code {...}} (braces may nest,
+     * as in {@code {id:\d{3}}}), with dots and wildcards turned into hyphens and separators
+     * trimmed from both ends. A plain loop, so a route pattern cannot make it backtrack.
+     */
     private static String literalPart(String segment) {
-        String literal = VARIABLE.matcher(segment).replaceAll("").replace('*', '-').replace('.', '-');
-        return EDGES.matcher(literal).replaceAll("");
+        StringBuilder literal = new StringBuilder(segment.length());
+        int depth = 0;
+        for (int i = 0; i < segment.length(); i++) {
+            char c = segment.charAt(i);
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth = Math.max(0, depth - 1);
+            } else if (depth == 0) {
+                literal.append(c == '.' || c == '*' ? '-' : c);
+            }
+        }
+        int start = 0;
+        int end = literal.length();
+        while (start < end && !Character.isLetterOrDigit(literal.charAt(start))) {
+            start++;
+        }
+        while (end > start && !Character.isLetterOrDigit(literal.charAt(end - 1))) {
+            end--;
+        }
+        return literal.substring(start, end);
+    }
+
+    private static boolean isVersion(String segment) {
+        if (segment.length() < 2 || segment.charAt(0) != 'v') {
+            return false;
+        }
+        for (int i = 1; i < segment.length(); i++) {
+            if (!Character.isDigit(segment.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 }
