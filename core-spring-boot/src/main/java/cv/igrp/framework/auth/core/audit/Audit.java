@@ -49,8 +49,8 @@ public class Audit {
     private static final String INSERT_EVENT = """
             INSERT INTO audit_event (id, event, resource, payload, username, service, agent, result, trace_id, occurred_at)
             VALUES (?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?)""";
-    private static final String INSERT_OUTBOX = """
-            INSERT INTO audit_outbox (id, event_id, payload, created_at) VALUES (?, ?, ?::jsonb, ?)""";
+    private static final String INSERT_OUTBOX =
+            "INSERT INTO audit_outbox (id, event_id, payload, created_at) VALUES (?, ?, ?::jsonb, ?)";
 
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transactions;
@@ -73,6 +73,8 @@ public class Audit {
      * @param payload  details, serialised as JSON; may be {@code null}
      * @throws IllegalStateException when the audit tables are not available (not PostgreSQL)
      */
+    // "record" is the API name in the v3 spec (audit.record); as a method name it is legal Java.
+    @SuppressWarnings("java:S6213")
     public void record(String event, String resource, Object payload) {
         String unavailable = schema.unavailableReason();
         if (unavailable != null) {

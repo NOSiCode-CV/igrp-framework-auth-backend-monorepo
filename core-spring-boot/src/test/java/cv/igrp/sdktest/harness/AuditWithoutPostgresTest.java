@@ -22,8 +22,9 @@ class AuditWithoutPostgresTest extends AbstractStarterTest {
     @Test
     @DisplayName("On a database other than PostgreSQL, recording fails with the reason instead of dropping the event")
     void recordFailsOutsidePostgres() {
+        Map<String, Object> payload = Map.of();
         IllegalStateException failure = assertThrows(IllegalStateException.class,
-                () -> audit.record("fatura.aprovada", "faturas/1", Map.of()));
+                () -> audit.record("fatura.aprovada", "faturas/1", payload));
         assertTrue(failure.getMessage().contains("PostgreSQL"), failure.getMessage());
     }
 }
