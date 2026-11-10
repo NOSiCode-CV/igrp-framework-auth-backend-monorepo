@@ -36,6 +36,8 @@ class RouteRegistrationTest extends AbstractStarterTest {
         assertEquals(Set.of(
                 route("GET", "/ping", "starter-test.ping.list"),
                 route("POST", "/notes", "starter-test.notes.create"),
+                route("POST", "/audit/commit", "starter-test.audit.commit.create"),
+                route("POST", "/audit/rollback", "starter-test.audit.rollback.create"),
                 route("GET", "/correlation", "starter-test.correlation.list"),
                 route("GET", "/correlation/call-am", "starter-test.correlation.call-am.list"),
                 route("GET", "/api/v1/faturas", "starter-test.faturas.list"),

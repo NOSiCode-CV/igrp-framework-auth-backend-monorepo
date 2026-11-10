@@ -71,9 +71,28 @@
             <artifactId>hibernate-envers</artifactId>
             <optional>true</optional>
         </dependency>
+        <!--
+          v3-21 (#29): business audit. Optional: the starter creates audit_event and
+          audit_outbox with its own Flyway history, on PostgreSQL only.
+        -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
 

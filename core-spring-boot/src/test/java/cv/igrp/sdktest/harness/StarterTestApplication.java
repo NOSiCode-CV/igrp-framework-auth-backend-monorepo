@@ -1,5 +1,6 @@
 package cv.igrp.sdktest.harness;
 
+import cv.igrp.framework.auth.core.audit.Audit;
 import cv.igrp.framework.auth.core.audit.CorrelationIds;
 import cv.igrp.framework.auth.core.route.Permission;
 import cv.igrp.framework.auth.core.route.Public;
@@ -7,11 +8,15 @@ import cv.igrp.platform.access.client.ApiClient;
 import cv.igrp.platform.access.client.ApiException;
 import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
@@ -105,5 +110,34 @@ public class StarterTestApplication {
         String callAm() throws ApiException, java.io.IOException, InterruptedException {
             return am.invokeAPIRaw("/api/echo", "GET", Map.of(), null, Map.of());
         }
+    }
+
+    /** v3-21: records a business action inside the action's transaction, then commits or rolls back. */
+    @RestController
+    @RequestMapping("/audit")
+    static class AuditController {
+
+        private final Audit audit;
+
+        AuditController(Audit audit) {
+            this.audit = audit;
+        }
+
+        @Transactional
+        @PostMapping("/commit")
+        void commit(@RequestParam String resource) {
+            audit.record("fatura.aprovada", resource, Map.of("total", 100));
+        }
+
+        @Transactional
+        @PostMapping("/rollback")
+        void rollback(@RequestParam String resource) {
+            audit.record("fatura.aprovada", resource, Map.of("total", 100));
+            throw new ActionFailed();
+        }
+    }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    static class ActionFailed extends RuntimeException {
     }
 }
