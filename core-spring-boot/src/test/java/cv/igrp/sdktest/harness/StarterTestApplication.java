@@ -2,6 +2,7 @@ package cv.igrp.sdktest.harness;
 
 import cv.igrp.framework.auth.core.audit.Audit;
 import cv.igrp.framework.auth.core.audit.CorrelationIds;
+import cv.igrp.framework.auth.core.field.FieldPermission;
 import cv.igrp.framework.auth.core.route.Permission;
 import cv.igrp.framework.auth.core.route.Public;
 import cv.igrp.platform.access.client.ApiClient;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -95,6 +98,36 @@ public class StarterTestApplication {
         @PreAuthorize("hasAuthority('starter-test.faturas.aprovar.update')")
         public String approve(String id) {
             return "approved " + id;
+        }
+    }
+
+    /** v3-16: a response with guarded fields, one of them in a nested object. */
+    public record InvoiceView(long id, BigDecimal total,
+                              @FieldPermission(value = "starter-test.faturas.margem.read", name = "Margem da fatura",
+                                      description = "Ver a margem de lucro de uma fatura")
+                              BigDecimal margin,
+                              CustomerView customer) {
+    }
+
+    public record CustomerView(String name, @FieldPermission("starter-test.clientes.nif.read") String nif) {
+    }
+
+    @RestController
+    static class InvoiceViewController {
+
+        private static InvoiceView invoice(long id) {
+            return new InvoiceView(id, new BigDecimal("100.00"), new BigDecimal("12.50"),
+                    new CustomerView("Maria", "123456789"));
+        }
+
+        @GetMapping("/views/faturas")
+        List<InvoiceView> list() {
+            return List.of(invoice(1), invoice(2));
+        }
+
+        @GetMapping("/views/faturas/{id}")
+        InvoiceView read(@PathVariable long id) {
+            return invoice(id);
         }
     }
 

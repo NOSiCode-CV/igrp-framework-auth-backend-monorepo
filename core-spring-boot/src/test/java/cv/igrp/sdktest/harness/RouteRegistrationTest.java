@@ -38,6 +38,8 @@ class RouteRegistrationTest extends AbstractStarterTest {
                 // Public by public-paths at request time, but still a route of the service.
                 route("GET", "/infra/status", "starter-test.infra.status.list"),
                 route("GET", "/legacy/guarded", "starter-test.legacy.guarded.list"),
+                route("GET", "/views/faturas", "starter-test.views.faturas.list"),
+                route("GET", "/views/faturas/{id}", "starter-test.views.faturas.read"),
                 route("POST", "/notes", "starter-test.notes.create"),
                 route("POST", "/audit/commit", "starter-test.audit.commit.create"),
                 route("POST", "/audit/rollback", "starter-test.audit.rollback.create"),
@@ -48,6 +50,19 @@ class RouteRegistrationTest extends AbstractStarterTest {
                 annotatedRoute("POST", "/api/v1/faturas/{id}/aprovar", "starter-test.faturas.aprovar.update",
                         "Aprovar fatura", "Aprova uma fatura pendente")
         ), routes);
+    }
+
+    @Test
+    @DisplayName("v3-16: the @FieldPermission keys are registered next to the routes, with their names")
+    void registersFieldKeys() {
+        JsonNode body = JsonMapper.builder().build().readTree(AM.lastRequest("POST", "/api/routes/register").body());
+        Set<Map<String, Object>> fields = new HashSet<>();
+        body.get("fields").forEach(field -> fields.add(asMap(field)));
+
+        assertEquals(Set.of(
+                Map.of("key", "starter-test.faturas.margem.read", "name", "Margem da fatura",
+                        "description", "Ver a margem de lucro de uma fatura"),
+                Map.of("key", "starter-test.clientes.nif.read")), fields);
     }
 
     private static Map<String, Object> route(String method, String path, String key) {

@@ -1,5 +1,8 @@
 package cv.igrp.framework.auth.core.route;
 
+import cv.igrp.framework.auth.core.field.FieldCatalog;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.boot.autoconfigure.AutoConfigurationPackages;
 import cv.igrp.platform.access.client.auth.ClientCredentialsTokenProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,8 +30,12 @@ public class RouteRegistrar implements SmartInitializingSingleton {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RouteRegistrar.class);
 
-    /** The request body of {@code POST /api/routes/register}. */
-    public record Registration(String service, String version, List<RouteCatalog.Route> routes) {
+    /**
+     * The request body of {@code POST /api/routes/register}. {@code fields} are the
+     * {@code @FieldPermission} keys (v3-16), registered so administrators can grant them.
+     */
+    public record Registration(String service, String version, List<RouteCatalog.Route> routes,
+                               List<FieldCatalog.Field> fields) {
     }
 
     /** The response of {@code POST /api/routes/register}. */
@@ -73,6 +80,7 @@ public class RouteRegistrar implements SmartInitializingSingleton {
         RequestMappingHandlerMapping mapping =
                 context.getBean("requestMappingHandlerMapping", RequestMappingHandlerMapping.class);
         List<RouteCatalog.Route> routes = RouteCatalog.collect(service, mapping.getHandlerMethods());
+        List<FieldCatalog.Field> fields = FieldCatalog.collect(service, applicationPackages(), context.getClassLoader());
 
         if (!am.hasCredentials()) {
             LOGGER.warn("[Route Registration] igrp.access.m2m.client-id / client-secret not set: "
@@ -91,14 +99,20 @@ public class RouteRegistrar implements SmartInitializingSingleton {
                     .uri("/api/routes/register")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(new Registration(service, version, routes))
+                    .body(new Registration(service, version, routes, fields))
                     .retrieve()
                     .body(Result.class);
-            LOGGER.info("[Route Registration] {} routes of '{}' {} registered: {}",
-                    routes.size(), service, version, result);
+            LOGGER.info("[Route Registration] {} routes and {} field keys of '{}' {} registered: {}",
+                    routes.size(), fields.size(), service, version, result);
         } catch (Exception ex) {
             LOGGER.error("[Route Registration] Could not register {} routes of '{}' with Access Management; "
                     + "the next startup registers them again.", routes.size(), service, ex);
         }
+    }
+
+    /** The packages of the application's {@code @SpringBootApplication}, where its own types live. */
+    private List<String> applicationPackages() {
+        BeanFactory beanFactory = context.getAutowireCapableBeanFactory();
+        return AutoConfigurationPackages.has(beanFactory) ? AutoConfigurationPackages.get(beanFactory) : List.of();
     }
 }

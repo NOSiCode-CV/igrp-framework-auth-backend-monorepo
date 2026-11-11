@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import cv.igrp.framework.auth.core.security.RootAccess;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
@@ -29,8 +30,6 @@ import java.util.function.Supplier;
  */
 public class RouteDecisionFilter extends OncePerRequestFilter {
 
-    static final String ROOT_CLAIM = "is_super_admin";
-
     private final Supplier<RouteResolver> resolver;
     private final PermissionLookup lookup;
     private final AccessAudit audit;
@@ -53,7 +52,7 @@ public class RouteDecisionFilter extends OncePerRequestFilter {
         Jwt jwt = callerToken();
         String method = request.getMethod();
         String path = request.getRequestURI();
-        if (isRoot(jwt)) {
+        if (RootAccess.isRoot(jwt)) {
             audit.root(method, path, resolution.key());
             chain.doFilter(request, response);
             return;
@@ -82,8 +81,4 @@ public class RouteDecisionFilter extends OncePerRequestFilter {
         throw new AccessDeniedException("Only bearer tokens carry a permission set");
     }
 
-    private static boolean isRoot(Jwt jwt) {
-        Object claim = jwt.getClaims().get(ROOT_CLAIM);
-        return Boolean.TRUE.equals(claim) || "true".equals(claim);
-    }
 }

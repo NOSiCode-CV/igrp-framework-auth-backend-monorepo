@@ -80,7 +80,7 @@ class AuthAutoConfigurationTest {
     @DisplayName("Without any scan the application gets the wiring, and no igrpAuthorization bean")
     void withoutScan() {
         runner.run(context -> {
-            assertEquals(Set.of("authenticationHelper", "igrpApiClient"), igrpBeanNames(context));
+            assertEquals(Set.of("authenticationHelper", "fieldPermissionModule", "igrpApiClient"), igrpBeanNames(context));
             assertTrue(context.getBean("igrpApiClient") instanceof ApiClient);
             assertEquals(1, context.getBeansOfType(AuthenticationHelper.class).size());
             assertFalse(context.containsBean("igrpAuthorization"));
@@ -94,7 +94,7 @@ class AuthAutoConfigurationTest {
         runner.withUserConfiguration(LegacyScanningApplication.class).run(context -> {
             assertFalse(context.isClosed());
             assertNull(context.getStartupFailure());
-            assertEquals(Set.of("authenticationHelper", "igrpApiClient"), igrpBeanNames(context));
+            assertEquals(Set.of("authenticationHelper", "fieldPermissionModule", "igrpApiClient"), igrpBeanNames(context));
         });
     }
 
