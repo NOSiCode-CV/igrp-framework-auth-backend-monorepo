@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
@@ -51,9 +52,9 @@ public class PermissionAuthenticationConverter implements Converter<Jwt, Abstrac
         private final transient Supplier<List<GrantedAuthority>> permissions;
 
         PermissionAuthentication(Jwt jwt, Supplier<List<GrantedAuthority>> permissions) {
-            // Authenticated by a bearer token, as Spring Security's own converter marks it;
-            // the permission keys come from the supplier.
-            super(jwt, List.of(FactorGrantedAuthority.fromAuthority(BEARER_FACTOR)), jwt.getSubject());
+            // The bearer factor, as Spring Security's own converter gives it. The keys come later.
+            super(jwt, List.of(FactorGrantedAuthority.fromAuthority(BEARER_FACTOR)),
+                    Objects.requireNonNull(jwt.getSubject(), "A token without sub has no permission set"));
             this.permissions = SingletonSupplier.of(permissions);
         }
 

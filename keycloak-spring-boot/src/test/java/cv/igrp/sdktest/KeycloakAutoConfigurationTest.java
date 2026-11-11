@@ -1,6 +1,5 @@
 package cv.igrp.sdktest;
 
-import cv.igrp.framework.auth.core.security.IgrpJwtAuthenticationConverter;
 import cv.igrp.framework.auth.keycloak.security.KeycloakJwtAuthenticationConverter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,12 +17,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The Keycloak module registers itself through auto-configuration. With
- * core-spring-boot next to it, which of the two {@code JwtAuthenticationConverter}s
- * applied used to depend on registration order; now core-spring-boot's always wins.
+ * The Keycloak module registers itself through auto-configuration. Its JWT converter
+ * maps Keycloak roles for services without core-spring-boot; the 0.3 starter's route
+ * security sets its own converter, so the two never compete.
  */
 class KeycloakAutoConfigurationTest {
 
@@ -64,22 +64,18 @@ class KeycloakAutoConfigurationTest {
     }
 
     @Test
-    @DisplayName("With core-spring-boot present, its converter applies and Keycloak's backs off")
-    void coreWins() {
+    @DisplayName("Next to the 0.3 starter it still loads alone: the starter has no JWT converter bean of its own")
+    void nextToTheStarter() {
         new ApplicationContextRunner()
                 .withPropertyValues("igrp.access.api.base-url=http://localhost:1")
                 .withConfiguration(AutoConfigurations.of(
                         KeycloakJwtAuthenticationConverter.class,
-                        IgrpJwtAuthenticationConverter.class,
                         cv.igrp.framework.auth.core.autoconfig.AutoConfiguration.class))
                 .run(context -> {
+                    // The starter's route security sets its own converter on the chain (v3-08),
+                    // so this bean is only used by services without the starter.
                     assertEquals(1, context.getBeansOfType(JwtAuthenticationConverter.class).size());
-                    Set<String> authorities = context.getBean(JwtAuthenticationConverter.class)
-                            .convert(jwt("not-a-jwt")).getAuthorities().stream()
-                            .map(GrantedAuthority::getAuthority)
-                            .collect(Collectors.toSet());
-
-                    assertTrue(authorities.contains("ROLE_ACTIVITI_USER"), authorities.toString());
+                    assertFalse(context.containsBean("igrpAuthorization"));
                 });
     }
 }

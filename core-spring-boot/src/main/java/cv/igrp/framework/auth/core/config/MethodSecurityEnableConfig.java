@@ -47,6 +47,10 @@ import java.util.function.Supplier;
 )
 public class MethodSecurityEnableConfig {
 
+    private MethodSecurityEnableConfig() {
+        // Only static infrastructure beans.
+    }
+
     @Bean
     @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
     static Advisor igrpPreAuthorize(ApplicationContext context) {
@@ -102,8 +106,8 @@ public class MethodSecurityEnableConfig {
         }
 
         static boolean isRouteHandler(MethodInvocation invocation) {
-            Class<?> target = invocation.getThis() == null
-                    ? invocation.getMethod().getDeclaringClass() : AopUtils.getTargetClass(invocation.getThis());
+            Object bean = invocation.getThis();
+            Class<?> target = bean == null ? invocation.getMethod().getDeclaringClass() : AopUtils.getTargetClass(bean);
             Method method = AopUtils.getMostSpecificMethod(invocation.getMethod(), target);
             return AnnotatedElementUtils.hasAnnotation(target, Controller.class)
                     && AnnotatedElementUtils.hasAnnotation(method, RequestMapping.class);

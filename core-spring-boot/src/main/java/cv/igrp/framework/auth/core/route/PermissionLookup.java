@@ -78,7 +78,7 @@ public class PermissionLookup {
         }
         try {
             Set<String> members = redis.opsForSet().members(setKey(sub));
-            if (members == null || !members.contains(MARKER)) {
+            if (!members.contains(MARKER)) {
                 return Optional.empty();
             }
             Set<String> keys = new HashSet<>(members);

@@ -10,10 +10,9 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import java.util.*;
 import java.util.stream.Collectors;
 
-// When core-spring-boot is present its converter wins, on every startup: this one
-// is evaluated after it and backs off. Named as a string because core-spring-boot
-// is optional here.
-@AutoConfiguration(afterName = "cv.igrp.framework.auth.core.security.IgrpJwtAuthenticationConverter")
+// Maps Keycloak roles for services without core-spring-boot. The 0.3 starter's route
+// security sets its own converter on the security chain, so it never uses this bean.
+@AutoConfiguration
 public class KeycloakJwtAuthenticationConverter {
 
     @Bean
