@@ -35,6 +35,8 @@ class RouteRegistrationTest extends AbstractStarterTest {
         // Not registered: the @Public route and Spring Boot's own /error.
         assertEquals(Set.of(
                 route("GET", "/ping", "starter-test.ping.list"),
+                // Public by public-paths at request time, but still a route of the service.
+                route("GET", "/infra/status", "starter-test.infra.status.list"),
                 route("POST", "/notes", "starter-test.notes.create"),
                 route("POST", "/audit/commit", "starter-test.audit.commit.create"),
                 route("POST", "/audit/rollback", "starter-test.audit.rollback.create"),
