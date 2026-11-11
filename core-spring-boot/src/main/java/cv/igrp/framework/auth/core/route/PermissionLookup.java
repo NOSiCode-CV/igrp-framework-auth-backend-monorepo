@@ -11,6 +11,7 @@ import org.springframework.web.client.RestClientResponseException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Whether a user holds a permission key in this service's application (v3-07). Reads the
@@ -52,28 +53,24 @@ public class PermissionLookup {
     }
 
     public Answer check(String sub, String token, String key) {
-        Boolean cached = fromRedis(sub, key);
-        if (cached != null) {
-            return cached ? Answer.ALLOWED : Answer.DENIED;
-        }
-        return fromAm(token, key);
+        return fromRedis(sub, key).orElseGet(() -> fromAm(token, key));
     }
 
-    /** @return the answer from the set, or {@code null} on a miss or when Redis cannot be read */
-    private Boolean fromRedis(String sub, String key) {
+    /** @return the answer from the set; empty on a miss or when Redis cannot be read */
+    private Optional<Answer> fromRedis(String sub, String key) {
         if (redis == null) {
-            return null;
+            return Optional.empty();
         }
         try {
             Map<Object, Boolean> members = redis.opsForSet()
                     .isMember("permissions:user:" + sub + ":app:" + applicationCode, MARKER, key);
             if (members == null || !Boolean.TRUE.equals(members.get(MARKER))) {
-                return null;
+                return Optional.empty();
             }
-            return Boolean.TRUE.equals(members.get(key));
+            return Optional.of(Boolean.TRUE.equals(members.get(key)) ? Answer.ALLOWED : Answer.DENIED);
         } catch (RuntimeException ex) {
             LOGGER.warn("[Route Filter] Redis unavailable, asking AM for the permissions of '{}': {}", sub, ex.getMessage());
-            return null;
+            return Optional.empty();
         }
     }
 

@@ -9,7 +9,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.security.autoconfigure.web.servlet.ConditionalOnDefaultWebSecurity;
+import org.springframework.boot.security.autoconfigure.web.servlet.ConditionalOnDefaultServletWebSecurity;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
@@ -74,7 +74,7 @@ public class RouteSecurityAutoConfiguration {
 
     /** Replaces Spring Boot's default chain: the resource server, with the route security. */
     @Bean
-    @ConditionalOnDefaultWebSecurity
+    @ConditionalOnDefaultServletWebSecurity
     public SecurityFilterChain igrpSecurityFilterChain(HttpSecurity http, RouteSecurity routeSecurity) {
         routeSecurity.apply(http);
         http.oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()));

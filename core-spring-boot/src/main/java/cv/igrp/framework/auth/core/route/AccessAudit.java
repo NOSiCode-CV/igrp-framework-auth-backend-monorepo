@@ -34,14 +34,14 @@ public class AccessAudit {
     }
 
     public void denied(String method, String path, String key) {
-        record(DENIED, method, path, key);
+        write(DENIED, method, path, key);
     }
 
     public void root(String method, String path, String key) {
-        record(ROOT, method, path, key);
+        write(ROOT, method, path, key);
     }
 
-    private void record(String event, String method, String path, String key) {
+    private void write(String event, String method, String path, String key) {
         String resource = method + " " + path;
         Map<String, Object> payload = key == null ? Map.of("method", method, "path", path)
                 : Map.of("method", method, "path", path, "key", key);
