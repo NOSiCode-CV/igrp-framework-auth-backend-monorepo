@@ -4,6 +4,8 @@ import cv.igrp.sdktest.startup.action.ActionApp;
 import cv.igrp.sdktest.startup.derivedreuse.DerivedReuseApp;
 import cv.igrp.sdktest.startup.prefix.PrefixApp;
 import cv.igrp.sdktest.startup.reuse.ReuseApp;
+import cv.igrp.sdktest.startup.ownchain.OwnChainApp;
+import cv.igrp.sdktest.startup.ownchainapplied.OwnChainAppliedApp;
 import cv.igrp.sdktest.startup.servicename.ServiceNameApp;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -18,6 +20,8 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -62,6 +66,28 @@ class StartupFailuresTest {
         String[] args = Stream.concat(Arrays.stream(BASE_ARGS_WITHOUT_VERSION),
                 Stream.of("--igrp.security.service-name=billing")).toArray(String[]::new);
         assertStartupFails(ServiceNameApp.class, args, "igrp.security.service-version");
+    }
+
+    @Test
+    @DisplayName("Refuses to start without the application code, which names the permission set to check")
+    void missingApplicationCode() {
+        String[] args = Stream.concat(Arrays.stream(BASE_ARGS),
+                Stream.of("--igrp.security.service-name=billing", "--igrp.security.application-code=")).toArray(String[]::new);
+        assertStartupFails(ServiceNameApp.class, args, "igrp.security.application-code");
+    }
+
+    @Test
+    @DisplayName("Refuses to start when the service's own security chain leaves out the route security")
+    void ownChainWithoutRouteSecurity() {
+        assertStartupFails(OwnChainApp.class, "routeSecurity.apply(http)");
+    }
+
+    @Test
+    @DisplayName("A service's own security chain that applies the route security starts")
+    void ownChainWithRouteSecurity() {
+        try (ConfigurableApplicationContext context = start(OwnChainAppliedApp.class)) {
+            assertTrue(context.isActive());
+        }
     }
 
     @Test
@@ -132,6 +158,7 @@ class StartupFailuresTest {
     private static final String[] BASE_ARGS_WITHOUT_VERSION = {
             "--spring.application.name=failing-test",
             "--server.port=0",
+            "--igrp.security.application-code=failing-app",
             // Unreachable on purpose: these apps must fail (or start) before AM matters.
             "--igrp.access.api.base-url=http://127.0.0.1:1",
             "--spring.security.oauth2.resourceserver.jwt.jwk-set-uri=http://127.0.0.1:1/oauth2/jwks",
@@ -147,10 +174,13 @@ class StartupFailuresTest {
         return run(app, BASE_ARGS, extraArgs);
     }
 
-    // Later arguments win, so extraArgs can override the base ones.
+    // An extra argument replaces the base one with the same name. Spring would not pick the
+    // later one: it joins repeated command-line options with a comma.
     private static ConfigurableApplicationContext run(Class<?> app, String[] baseArgs, String... extraArgs) {
-        String[] args = Stream.concat(Arrays.stream(baseArgs), Arrays.stream(extraArgs)).toArray(String[]::new);
-        return new SpringApplicationBuilder(app).run(args);
+        Map<String, String> args = new LinkedHashMap<>();
+        Stream.concat(Arrays.stream(baseArgs), Arrays.stream(extraArgs))
+                .forEach(arg -> args.put(arg.substring(0, arg.indexOf('=') + 1), arg));
+        return new SpringApplicationBuilder(app).run(args.values().toArray(String[]::new));
     }
 
     private static String messages(Throwable failure) {

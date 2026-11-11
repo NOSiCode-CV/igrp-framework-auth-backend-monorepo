@@ -50,6 +50,20 @@ class AuthorizationSyncRunnerTest {
     }
 
     @Test
+    @DisplayName("An interrupted sync keeps the thread's interrupt flag and does not fail the startup")
+    void interrupted() throws Exception {
+        configure("faturacao-api", "secret", "");
+        org.mockito.Mockito.when(client.invokeAPIRaw(any(), any(), any(), any(), any()))
+                .thenThrow(new InterruptedException());
+        try {
+            runner.syncAuthorization();
+            org.junit.jupiter.api.Assertions.assertTrue(Thread.currentThread().isInterrupted());
+        } finally {
+            Thread.interrupted();
+        }
+    }
+
+    @Test
     @DisplayName("Without a scope the credentials are set without one")
     void noScope() {
         configure("faturacao-api", "secret", "");

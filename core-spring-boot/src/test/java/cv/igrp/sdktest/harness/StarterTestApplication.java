@@ -75,6 +75,16 @@ public class StarterTestApplication {
         }
     }
 
+    /** v3-07: public in this environment through igrp.security.public-paths, not through @Public. */
+    @RestController
+    static class InfraController {
+
+        @GetMapping("/infra/status")
+        String status() {
+            return "up";
+        }
+    }
+
     /** v3-24: writes an audited entity, so a request produces an Envers revision. */
     @RestController
     static class NoteController {

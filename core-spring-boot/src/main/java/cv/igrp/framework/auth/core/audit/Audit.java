@@ -69,6 +69,11 @@ public class Audit {
         this.clock = clock;
     }
 
+    /** Whether the audit tables are there, so {@link #record} can write. */
+    public boolean available() {
+        return schema.unavailableReason() == null;
+    }
+
     /**
      * @param event    what happened, e.g. {@code fatura.aprovada}
      * @param resource what it happened to, e.g. {@code faturas/42}

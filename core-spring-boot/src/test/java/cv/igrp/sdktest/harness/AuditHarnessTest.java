@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -168,6 +169,27 @@ class AuditHarnessTest extends AbstractStarterTest {
                 () -> jdbc.update("UPDATE audit_outbox SET payload = '{}' WHERE event_id = " + eventId));
         assertThrows(DataAccessException.class,
                 () -> jdbc.update("DELETE FROM audit_outbox WHERE event_id = " + eventId));
+    }
+
+    @Test
+    @DisplayName("v3-07: a route denial and a request as root are audit events, written in their own transaction")
+    void accessDecisionsAreAudited() throws Exception {
+        AM.stub("GET", "/api/users/me/permissions", 200, permissionSet(List.of()));
+        String user = "user-" + UUID.randomUUID();
+        String root = "root-" + UUID.randomUUID();
+
+        mvc.perform(get("/api/v1/faturas").with(jwt().jwt(token -> token.subject(user))))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/faturas").with(jwt().jwt(token -> token.subject(root).claim("is_super_admin", true))))
+                .andExpect(status().isOk());
+
+        Map<String, Object> denial = jdbc.queryForMap("SELECT * FROM audit_event WHERE username = ?", user);
+        assertEquals("access.denied", denial.get("event"));
+        assertEquals("GET /api/v1/faturas", denial.get("resource"));
+        assertTrue(denial.get("payload").toString().contains("starter-test.faturas.list"), denial.toString());
+        Map<String, Object> rootAccess = jdbc.queryForMap("SELECT * FROM audit_event WHERE username = ?", root);
+        assertEquals("access.root", rootAccess.get("event"));
+        assertEquals(1, count("SELECT count(*) FROM audit_outbox WHERE event_id = ?::uuid", denial.get("id").toString()));
     }
 
     private int count(String sql, Object... args) {

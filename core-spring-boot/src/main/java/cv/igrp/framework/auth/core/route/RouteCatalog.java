@@ -47,6 +47,9 @@ public final class RouteCatalog {
         handlers.forEach((info, handler) -> {
             if (isRegistered(info, handler)) {
                 addRoutes(service, info, handler, routes, errors);
+            } else if (isMethodLess(info, handler)) {
+                LOGGER.warn("[Route Registration] {} maps no HTTP method and gets no permission key; "
+                        + "declare the method (@GetMapping, @PostMapping, ...) to register it.", handler);
             }
         });
         routes.values().stream()
@@ -61,17 +64,20 @@ public final class RouteCatalog {
         return List.copyOf(routes.values());
     }
 
-    /** Spring Boot's own handlers (such as /error), public routes and method-less mappings get no key. */
-    private static boolean isRegistered(RequestMappingInfo info, HandlerMethod handler) {
-        if (handler.getBeanType().getName().startsWith("org.springframework.") || isPublic(handler)) {
-            return false;
-        }
-        if (info.getMethodsCondition().getMethods().isEmpty()) {
-            LOGGER.warn("[Route Registration] {} maps no HTTP method and gets no permission key; "
-                    + "declare the method (@GetMapping, @PostMapping, ...) to register it.", handler);
-            return false;
-        }
-        return true;
+    /**
+     * Spring Boot's own handlers (such as /error), public routes and method-less mappings get no key.
+     * The route filter treats exactly these routes as the service's own, so both always agree.
+     */
+    static boolean isRegistered(RequestMappingInfo info, HandlerMethod handler) {
+        return !isSpringOwn(handler) && !isPublic(handler) && !info.getMethodsCondition().getMethods().isEmpty();
+    }
+
+    private static boolean isMethodLess(RequestMappingInfo info, HandlerMethod handler) {
+        return !isSpringOwn(handler) && !isPublic(handler) && info.getMethodsCondition().getMethods().isEmpty();
+    }
+
+    private static boolean isSpringOwn(HandlerMethod handler) {
+        return handler.getBeanType().getName().startsWith("org.springframework.");
     }
 
     /** One route per HTTP method and path of the handler; handlers sharing both (JSON and PDF) are one route. */

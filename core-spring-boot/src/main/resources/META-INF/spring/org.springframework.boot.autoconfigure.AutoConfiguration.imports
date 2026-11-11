@@ -5,3 +5,4 @@ cv.igrp.framework.auth.core.config.MethodSecurityEnableConfig
 cv.igrp.framework.auth.core.audit.CorrelationAutoConfiguration
 cv.igrp.framework.auth.core.audit.revision.RevisionAutoConfiguration
 cv.igrp.framework.auth.core.audit.AuditAutoConfiguration
+cv.igrp.framework.auth.core.route.RouteSecurityAutoConfiguration
