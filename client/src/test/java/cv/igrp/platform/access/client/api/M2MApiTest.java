@@ -4,6 +4,7 @@ import tools.jackson.core.type.TypeReference;
 import cv.igrp.platform.access.client.ApiException;
 import cv.igrp.platform.access.client.IApiClient;
 import cv.igrp.platform.access.client.JsonUtil;
+import cv.igrp.platform.access.client.auth.ClientCredentialsTokenProvider;
 import cv.igrp.platform.access.client.model.ApplicationDTO;
 import cv.igrp.platform.access.client.model.MenuEntryDTO;
 import cv.igrp.platform.access.client.model.PermissionDTO;
@@ -59,10 +60,10 @@ class M2MApiTest {
                 eq("POST"),
                 isNull(),
                 anyList(),
-                eq(Map.of("X-Machine-Auth-Token", "igrp-access-m2m-sync-token-1234"))
+                eq(Map.of("X-Machine-Service-ID", "svc"))
         )).thenReturn(jsonResponse);
 
-        Object result = m2mApi.syncPermissions(List.of(samplePermission), "igrp-access-m2m-sync-token-1234", null);
+        Object result = m2mApi.syncPermissions(List.of(samplePermission), "svc");
         
         assertNotNull(result);
         verify(apiClient).invokeAPIRaw(
@@ -70,7 +71,7 @@ class M2MApiTest {
                 eq("POST"),
                 isNull(),
                 eq(List.of(samplePermission)),
-                eq(Map.of("X-Machine-Auth-Token", "igrp-access-m2m-sync-token-1234"))
+                eq(Map.of("X-Machine-Service-ID", "svc"))
         );
     }
 
@@ -83,10 +84,10 @@ class M2MApiTest {
                 eq("POST"),
                 isNull(),
                 eq(List.of()),
-                eq(Map.of("X-Machine-Auth-Token", "igrp-access-m2m-sync-token-1234"))
+                eq(Map.of("X-Machine-Service-ID", "svc"))
         )).thenReturn(jsonResponse);
 
-        Object result = m2mApi.syncPermissions(null, "igrp-access-m2m-sync-token-1234", null);
+        Object result = m2mApi.syncPermissions(null, "svc");
         
         assertNotNull(result);
         verify(apiClient).invokeAPIRaw(
@@ -94,7 +95,7 @@ class M2MApiTest {
                 eq("POST"),
                 isNull(),
                 eq(List.of()),
-                eq(Map.of("X-Machine-Auth-Token", "igrp-access-m2m-sync-token-1234"))
+                eq(Map.of("X-Machine-Service-ID", "svc"))
         );
     }
 
@@ -107,10 +108,10 @@ class M2MApiTest {
                 eq("POST"),
                 isNull(),
                 eq(sampleResource),
-                eq(Map.of("X-Machine-Auth-Token", "igrp-access-m2m-sync-token-1234"))
+                eq(Map.of("X-Machine-Service-ID", "svc"))
         )).thenReturn(jsonResponse);
 
-        Object result = m2mApi.syncResources(sampleResource, "igrp-access-m2m-sync-token-1234", null);
+        Object result = m2mApi.syncResources(sampleResource, "svc");
         
         assertNotNull(result);
         verify(apiClient).invokeAPIRaw(
@@ -118,7 +119,7 @@ class M2MApiTest {
                 eq("POST"),
                 isNull(),
                 eq(sampleResource),
-                eq(Map.of("X-Machine-Auth-Token", "igrp-access-m2m-sync-token-1234"))
+                eq(Map.of("X-Machine-Service-ID", "svc"))
         );
     }
 
@@ -131,10 +132,10 @@ class M2MApiTest {
                 eq("POST"),
                 isNull(),
                 eq(sampleApplication),
-                eq(Map.of("X-Machine-Auth-Token", "igrp-access-m2m-sync-token-1234"))
+                eq(Map.of("X-Machine-Service-ID", "svc"))
         )).thenReturn(jsonResponse);
 
-        Object result = m2mApi.syncApplication(sampleApplication, "igrp-access-m2m-sync-token-1234", null);
+        Object result = m2mApi.syncApplication(sampleApplication, "svc");
         
         assertNotNull(result);
         verify(apiClient).invokeAPIRaw(
@@ -142,7 +143,7 @@ class M2MApiTest {
                 eq("POST"),
                 isNull(),
                 eq(sampleApplication),
-                eq(Map.of("X-Machine-Auth-Token", "igrp-access-m2m-sync-token-1234"))
+                eq(Map.of("X-Machine-Service-ID", "svc"))
         );
     }
 
@@ -155,10 +156,10 @@ class M2MApiTest {
                 eq("POST"),
                 isNull(),
                 eq(menus),
-                eq(Map.of("X-Machine-Auth-Token", "tok"))
+                eq(Map.of("X-Machine-Service-ID", "svc"))
         )).thenReturn("");
 
-        Object result = m2mApi.syncApplicationMenus("APP1", menus, "tok", null);
+        Object result = m2mApi.syncApplicationMenus("APP1", menus, "svc");
 
         assertNotNull(result);
         verify(apiClient).invokeAPIRaw(
@@ -166,7 +167,7 @@ class M2MApiTest {
                 eq("POST"),
                 isNull(),
                 eq(menus),
-                eq(Map.of("X-Machine-Auth-Token", "tok"))
+                eq(Map.of("X-Machine-Service-ID", "svc"))
         );
     }
 
@@ -175,22 +176,22 @@ class M2MApiTest {
         List<MenuEntryDTO> menus = List.of(new MenuEntryDTO());
 
         when(apiClient.invokeAPIRaw(
-                eq("/api/m2m/sync/applications/APP1/menus"),
-                eq("POST"),
-                eq(Map.of("syncRoles", "false")),
-                eq(menus),
-                eq(Map.of("X-Machine-Auth-Token", "tok"))
+                "/api/m2m/sync/applications/APP1/menus",
+                "POST",
+                Map.of("syncRoles", "false"),
+                menus,
+                Map.of("X-Machine-Service-ID", "svc")
         )).thenReturn("");
 
-        Object result = m2mApi.syncApplicationMenus("APP1", menus, Boolean.FALSE, "tok", null);
+        Object result = m2mApi.syncApplicationMenus("APP1", menus, Boolean.FALSE, "svc");
 
         assertNotNull(result);
         verify(apiClient).invokeAPIRaw(
-                eq("/api/m2m/sync/applications/APP1/menus"),
-                eq("POST"),
-                eq(Map.of("syncRoles", "false")),
-                eq(menus),
-                eq(Map.of("X-Machine-Auth-Token", "tok"))
+                "/api/m2m/sync/applications/APP1/menus",
+                "POST",
+                Map.of("syncRoles", "false"),
+                menus,
+                Map.of("X-Machine-Service-ID", "svc")
         );
     }
 
@@ -199,21 +200,33 @@ class M2MApiTest {
         List<MenuEntryDTO> menus = List.of(new MenuEntryDTO());
 
         when(apiClient.invokeAPIRaw(
-                eq("/api/m2m/sync/applications/APP1/menus"),
-                eq("POST"),
-                eq(Map.of("syncRoles", "true")),
-                eq(menus),
-                eq(Map.of("X-Machine-Auth-Token", "tok"))
+                "/api/m2m/sync/applications/APP1/menus",
+                "POST",
+                Map.of("syncRoles", "true"),
+                menus,
+                Map.of("X-Machine-Service-ID", "svc")
         )).thenReturn("");
 
-        m2mApi.syncApplicationMenus("APP1", menus, Boolean.TRUE, "tok", null);
+        m2mApi.syncApplicationMenus("APP1", menus, Boolean.TRUE, "svc");
 
         verify(apiClient).invokeAPIRaw(
-                eq("/api/m2m/sync/applications/APP1/menus"),
-                eq("POST"),
-                eq(Map.of("syncRoles", "true")),
-                eq(menus),
-                eq(Map.of("X-Machine-Auth-Token", "tok"))
+                "/api/m2m/sync/applications/APP1/menus",
+                "POST",
+                Map.of("syncRoles", "true"),
+                menus,
+                Map.of("X-Machine-Service-ID", "svc")
         );
+    }
+
+    @Test
+    void m2mCallsCarryTheClientCredentialsTokenAndNoStaticToken() throws Exception {
+        ClientCredentialsTokenProvider tokens = mock(ClientCredentialsTokenProvider.class);
+        when(tokens.getAccessToken()).thenReturn("access-token");
+        when(apiClient.getClientCredentialsTokenProvider()).thenReturn(tokens);
+
+        m2mApi.syncResources(sampleResource, "svc");
+
+        verify(apiClient).invokeAPIRaw(eq("/api/m2m/sync/resources"), eq("POST"), isNull(), eq(sampleResource),
+                eq(Map.of("X-Machine-Service-ID", "svc", "Authorization", "Bearer access-token")));
     }
 }
