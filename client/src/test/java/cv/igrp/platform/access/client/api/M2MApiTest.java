@@ -176,22 +176,22 @@ class M2MApiTest {
         List<MenuEntryDTO> menus = List.of(new MenuEntryDTO());
 
         when(apiClient.invokeAPIRaw(
-                eq("/api/m2m/sync/applications/APP1/menus"),
-                eq("POST"),
-                eq(Map.of("syncRoles", "false")),
-                eq(menus),
-                eq(Map.of("X-Machine-Service-ID", "svc"))
+                "/api/m2m/sync/applications/APP1/menus",
+                "POST",
+                Map.of("syncRoles", "false"),
+                menus,
+                Map.of("X-Machine-Service-ID", "svc")
         )).thenReturn("");
 
         Object result = m2mApi.syncApplicationMenus("APP1", menus, Boolean.FALSE, "svc");
 
         assertNotNull(result);
         verify(apiClient).invokeAPIRaw(
-                eq("/api/m2m/sync/applications/APP1/menus"),
-                eq("POST"),
-                eq(Map.of("syncRoles", "false")),
-                eq(menus),
-                eq(Map.of("X-Machine-Service-ID", "svc"))
+                "/api/m2m/sync/applications/APP1/menus",
+                "POST",
+                Map.of("syncRoles", "false"),
+                menus,
+                Map.of("X-Machine-Service-ID", "svc")
         );
     }
 
@@ -200,21 +200,21 @@ class M2MApiTest {
         List<MenuEntryDTO> menus = List.of(new MenuEntryDTO());
 
         when(apiClient.invokeAPIRaw(
-                eq("/api/m2m/sync/applications/APP1/menus"),
-                eq("POST"),
-                eq(Map.of("syncRoles", "true")),
-                eq(menus),
-                eq(Map.of("X-Machine-Service-ID", "svc"))
+                "/api/m2m/sync/applications/APP1/menus",
+                "POST",
+                Map.of("syncRoles", "true"),
+                menus,
+                Map.of("X-Machine-Service-ID", "svc")
         )).thenReturn("");
 
         m2mApi.syncApplicationMenus("APP1", menus, Boolean.TRUE, "svc");
 
         verify(apiClient).invokeAPIRaw(
-                eq("/api/m2m/sync/applications/APP1/menus"),
-                eq("POST"),
-                eq(Map.of("syncRoles", "true")),
-                eq(menus),
-                eq(Map.of("X-Machine-Service-ID", "svc"))
+                "/api/m2m/sync/applications/APP1/menus",
+                "POST",
+                Map.of("syncRoles", "true"),
+                menus,
+                Map.of("X-Machine-Service-ID", "svc")
         );
     }
 

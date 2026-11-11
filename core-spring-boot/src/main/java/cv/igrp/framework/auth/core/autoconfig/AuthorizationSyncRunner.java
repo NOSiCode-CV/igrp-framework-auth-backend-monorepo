@@ -68,9 +68,11 @@ public class AuthorizationSyncRunner {
                     && clientSecret != null && !clientSecret.isBlank();
 
             if (!useClientCredentials) {
-                LOGGER.warn("[Authorization Sync] Skipped: no client_credentials configured ({}={}, {}={}).",
-                        "igrp.access.m2m.client-id", maskBlank(clientId),
-                        "igrp.access.m2m.client-secret", clientSecret == null || clientSecret.isBlank() ? "(blank)" : "(set)");
+                if (LOGGER.isWarnEnabled()) {
+                    LOGGER.warn("[Authorization Sync] Skipped: no client_credentials configured ({}={}, {}={}).",
+                            "igrp.access.m2m.client-id", maskBlank(clientId),
+                            "igrp.access.m2m.client-secret", clientSecret == null || clientSecret.isBlank() ? "(blank)" : "(set)");
+                }
                 return;
             }
             if (scope != null && !scope.isBlank()) {

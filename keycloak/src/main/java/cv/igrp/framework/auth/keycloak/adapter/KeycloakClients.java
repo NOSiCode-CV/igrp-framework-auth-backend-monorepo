@@ -40,6 +40,7 @@ class KeycloakClients {
     private static final Logger LOGGER = LoggerFactory.getLogger(KeycloakClients.class);
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
+    private static final String IN_KEYCLOAK = " in Keycloak";
 
     static final String CLIENT_CREDENTIALS = "client_credentials";
     static final String AUTHORIZATION_CODE = "authorization_code";
@@ -89,7 +90,7 @@ class KeycloakClients {
         } catch (IAMException ex) {
             throw ex;
         } catch (RuntimeException ex) {
-            throw new IAMException("Error creating client " + clientId + " in Keycloak", ex);
+            throw new IAMException("Error creating client " + clientId + IN_KEYCLOAK, ex);
         }
     }
 
@@ -102,7 +103,7 @@ class KeycloakClients {
         } catch (IAMException ex) {
             throw ex;
         } catch (RuntimeException ex) {
-            throw new IAMException("Error rotating the secret of client " + clientId + " in Keycloak", ex);
+            throw new IAMException("Error rotating the secret of client " + clientId + IN_KEYCLOAK, ex);
         }
     }
 
@@ -117,7 +118,7 @@ class KeycloakClients {
         } catch (IAMException ex) {
             throw ex;
         } catch (RuntimeException ex) {
-            throw new IAMException("Error updating client " + clientId + " in Keycloak", ex);
+            throw new IAMException("Error updating client " + clientId + IN_KEYCLOAK, ex);
         }
     }
 
