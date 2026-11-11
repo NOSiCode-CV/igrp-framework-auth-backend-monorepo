@@ -2,15 +2,11 @@ package cv.igrp.framework.auth.core.autoconfig;
 
 import cv.igrp.framework.auth.core.audit.CorrelationIds;
 import cv.igrp.framework.auth.core.security.AuthenticationHelper;
-import cv.igrp.framework.auth.core.security.IAuthorizationServiceAdapter;
-import cv.igrp.framework.auth.core.security.IgrpAuthorizationService;
-import cv.igrp.framework.auth.core.security.IgrpAuthorizationServiceAdapter;
 import cv.igrp.framework.auth.core.route.RouteCatalog;
 import cv.igrp.framework.auth.core.route.RouteRegistrar;
 import cv.igrp.platform.access.client.ApiClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -26,49 +22,42 @@ import java.time.Duration;
  * stereotypes any more, so a scan finds nothing extra. Applications that still scan
  * {@code cv.igrp} keep working: Spring processes this class once, whichever way it arrives.
  *
- * <p>Bean names are part of the contract: {@code @PreAuthorize("@igrpAuthorization...")}
- * resolves {@code igrpAuthorization} by name.
+ * <p>The legacy {@code igrpAuthorization} bean is not part of the 0.3 starter (v3-08):
+ * routes are decided by the route filter, and {@code @PreAuthorize} on code with no route
+ * checks the caller's permission keys as authorities.
  */
 @org.springframework.boot.autoconfigure.AutoConfiguration
 public class AutoConfiguration {
 
+    /**
+     * The client for AM's API. With {@code igrp.access.m2m.client-id} and {@code -secret} set, its
+     * calls carry the service's own client_credentials token, kept until shortly before it expires.
+     */
     @Bean(name = "igrpApiClient")
     @ConditionalOnMissingBean
-    public ApiClient apiClient(@Value("${igrp.access.api.base-url}") String baseUrl) {
+    public ApiClient apiClient(@Value("${igrp.access.api.base-url}") String baseUrl,
+                               @Value("${igrp.access.m2m.client-id:}") String clientId,
+                               @Value("${igrp.access.m2m.client-secret:}") String clientSecret,
+                               @Value("${igrp.access.m2m.scope:}") String scope) {
         ApiClient client = new ApiClient();
         client.setBaseUrl(baseUrl);
         // v3-24: calls to AM carry the caller's traceparent and X-Correlation-ID.
         client.setDefaultHeaders(CorrelationIds::outgoingHeaders);
+        // v3-08: was set as a side effect of the removed AuthorizationSyncRunner.
+        if (!clientId.isBlank() && !clientSecret.isBlank()) {
+            if (scope.isBlank()) {
+                client.setClientCredentials(clientId, clientSecret);
+            } else {
+                client.setClientCredentials(clientId, clientSecret, scope);
+            }
+        }
         return client;
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(IAuthorizationServiceAdapter.class)
-    @ConditionalOnProperty(
-            name = "igrp.authorization.service.adapter",
-            havingValue = "igrp",
-            matchIfMissing = true
-    )
-    public IgrpAuthorizationServiceAdapter igrpAuthorizationServiceAdapter() {
-        return new IgrpAuthorizationServiceAdapter();
-    }
-
-    @Bean(name = "igrpAuthorization")
-    @ConditionalOnMissingBean(name = "igrpAuthorization")
-    public IgrpAuthorizationService igrpAuthorization() {
-        return new IgrpAuthorizationService();
     }
 
     @Bean
     @ConditionalOnMissingBean
     public AuthenticationHelper authenticationHelper() {
         return new AuthenticationHelper();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public AuthorizationSyncRunner authorizationSyncRunner(ApiClient igrpApiClient) {
-        return new AuthorizationSyncRunner(igrpApiClient);
     }
 
     /**

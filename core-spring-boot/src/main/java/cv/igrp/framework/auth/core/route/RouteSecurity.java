@@ -1,6 +1,7 @@
 package cv.igrp.framework.auth.core.route;
 
 import jakarta.servlet.http.HttpServletRequest;
+import cv.igrp.framework.auth.core.security.PermissionAuthenticationConverter;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -15,12 +16,12 @@ import java.util.function.Supplier;
  *
  * <p>The starter applies it to its own default chain. A service that defines its own
  * {@code SecurityFilterChain} applies it with one line, and must not add its own
- * {@code authorizeHttpRequests}:
+ * {@code authorizeHttpRequests}. It also sets up the resource server, whose JWT
+ * authorities are the caller's permission keys:
  * <pre>{@code
  * @Bean
  * SecurityFilterChain api(HttpSecurity http, RouteSecurity routeSecurity) {
  *     routeSecurity.apply(http);
- *     http.oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()));
  *     return http.build();
  * }
  * }</pre>
@@ -30,12 +31,15 @@ public class RouteSecurity {
 
     private final Supplier<RouteResolver> resolver;
     private final PermissionLookup lookup;
+    private final PermissionAuthenticationConverter converter;
     private final AccessAudit audit;
 
     /** @param resolver built on first use, once the handler mappings exist */
-    public RouteSecurity(Supplier<RouteResolver> resolver, PermissionLookup lookup, AccessAudit audit) {
+    public RouteSecurity(Supplier<RouteResolver> resolver, PermissionLookup lookup,
+                         PermissionAuthenticationConverter converter, AccessAudit audit) {
         this.resolver = SingletonSupplier.of(resolver);
         this.lookup = lookup;
+        this.converter = converter;
         this.audit = audit;
     }
 
@@ -45,6 +49,8 @@ public class RouteSecurity {
                 .requestMatchers(publicRoutes).permitAll()
                 .anyRequest().authenticated());
         http.addFilterAfter(new RouteDecisionFilter(resolver, lookup, audit), AuthorizationFilter.class);
+        // The bearer token's authorities are the caller's permission keys (v3-08).
+        http.oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)));
         return http;
     }
 

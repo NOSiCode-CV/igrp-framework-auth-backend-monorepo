@@ -36,7 +36,8 @@ public abstract class AbstractStarterTest {
             "starter-test.ping.list", "starter-test.notes.create", "starter-test.audit.commit.create",
             "starter-test.audit.rollback.create", "starter-test.correlation.list",
             "starter-test.correlation.call-am.list", "starter-test.faturas.list", "starter-test.faturas.read",
-            "starter-test.faturas.aprovar.update", "starter-test.infra.status.list");
+            "starter-test.faturas.aprovar.update", "starter-test.infra.status.list",
+            "starter-test.legacy.guarded.list");
 
     protected static final StubAccessManagement AM = StubAccessManagement.start();
 

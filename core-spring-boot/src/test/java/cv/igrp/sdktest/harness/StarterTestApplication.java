@@ -9,6 +9,8 @@ import cv.igrp.platform.access.client.ApiException;
 import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -72,6 +74,27 @@ public class StarterTestApplication {
         @GetMapping("/publicas")
         String publicList() {
             return "[]";
+        }
+    }
+
+    /** v3-08: a leftover @PreAuthorize that would deny everyone; the route decision applies instead. */
+    @RestController
+    static class LegacyGuardedController {
+
+        @PreAuthorize("denyAll()")
+        @GetMapping("/legacy/guarded")
+        String guarded() {
+            return "reached";
+        }
+    }
+
+    /** v3-08: code with no route stays protected by @PreAuthorize, against the caller's permission keys. */
+    @Service
+    public static class InvoiceApprovals {
+
+        @PreAuthorize("hasAuthority('starter-test.faturas.aprovar.update')")
+        public String approve(String id) {
+            return "approved " + id;
         }
     }
 
