@@ -3,6 +3,7 @@ package cv.igrp.framework.auth.core.adapter;
 import cv.igrp.framework.auth.core.exception.IAMException;
 import cv.igrp.framework.auth.core.model.*;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -435,5 +436,53 @@ public interface IAdapter {
    * @throws IAMException if the fetch fails
    */
   List<String> getAllClientProtocolMappers() throws IAMException;
+
+  // ---- Service clients: they live in the IdP, AM never stores their secret ----
+
+  /**
+   * Creates a confidential client in the IdP.
+   *
+   * @param registration the client's name, grant types and redirect URIs
+   * @return the client id and the secret the IdP generated
+   * @throws IAMException if the IdP refuses the client, e.g. the client id is taken
+   */
+  IssuedClient createClient(ClientRegistration registration) throws IAMException;
+
+  /**
+   * Replaces a client's secret with a new one; the old secret stops working.
+   *
+   * @param clientId the client id in the IdP
+   * @return the new secret
+   * @throws IAMException if the client does not exist or the IdP fails
+   */
+  IssuedClient rotateClientSecret(String clientId) throws IAMException;
+
+  /**
+   * Updates a client's name, grant types and redirect URIs. The client id never changes.
+   *
+   * @param clientId     the client id in the IdP
+   * @param registration the new values; its client id is ignored
+   * @throws IAMException if the client does not exist or the IdP fails
+   */
+  void updateClient(String clientId, ClientRegistration registration) throws IAMException;
+
+  /**
+   * Deletes a client. A client that no longer exists in the IdP is not an error.
+   *
+   * @param clientId the client id in the IdP
+   * @throws IAMException if the IdP fails
+   */
+  void deleteClient(String clientId) throws IAMException;
+
+  /**
+   * Checks a client's credentials against the IdP's token endpoint
+   * ({@code client_credentials}).
+   *
+   * @param clientId     the presented client id
+   * @param clientSecret the presented secret
+   * @return when the IdP token issued for these credentials expires, or empty if the IdP refused them
+   * @throws IAMException if the IdP could not be reached or answered with an error other than a refusal
+   */
+  Optional<Instant> authenticateClient(String clientId, String clientSecret) throws IAMException;
 
 }

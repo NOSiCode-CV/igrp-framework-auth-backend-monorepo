@@ -17,6 +17,7 @@ import org.keycloak.representations.idm.authorization.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -38,10 +39,37 @@ public class KeycloakAdapter implements IAdapter {
 
     private final KeycloakClientFactory keycloakClientFactory;
     private final KeycloakProperties keycloakProperties;
+    private final KeycloakClients serviceClients;
 
     public KeycloakAdapter(KeycloakClientFactory keycloakClientFactory, KeycloakProperties keycloakProperties) {
         this.keycloakClientFactory = keycloakClientFactory;
         this.keycloakProperties = keycloakProperties;
+        this.serviceClients = new KeycloakClients(keycloakClientFactory, keycloakProperties);
+    }
+
+    @Override
+    public IssuedClient createClient(ClientRegistration registration) throws IAMException {
+        return serviceClients.create(registration);
+    }
+
+    @Override
+    public IssuedClient rotateClientSecret(String clientId) throws IAMException {
+        return serviceClients.rotateSecret(clientId);
+    }
+
+    @Override
+    public void updateClient(String clientId, ClientRegistration registration) throws IAMException {
+        serviceClients.update(clientId, registration);
+    }
+
+    @Override
+    public void deleteClient(String clientId) throws IAMException {
+        serviceClients.delete(clientId);
+    }
+
+    @Override
+    public Optional<Instant> authenticateClient(String clientId, String clientSecret) throws IAMException {
+        return serviceClients.authenticate(clientId, clientSecret);
     }
 
     @Override
