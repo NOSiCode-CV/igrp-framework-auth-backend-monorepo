@@ -2,6 +2,7 @@ package cv.igrp.framework.auth.core.route;
 
 import cv.igrp.framework.auth.core.audit.Audit;
 import cv.igrp.framework.auth.core.audit.CorrelationIds;
+import cv.igrp.framework.auth.core.security.PermissionAuthenticationConverter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,7 +17,6 @@ import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.env.Environment;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -49,27 +49,38 @@ import java.util.List;
 @ConditionalOnClass(SecurityFilterChain.class)
 public class RouteSecurityAutoConfiguration {
 
+    /** The caller's permission set: the Redis set AM writes, AM on a miss. Used by the route filter and method security. */
     @Bean
-    public RouteSecurity igrpRouteSecurity(
-            ApplicationContext context, Environment environment,
-            @Value("${igrp.security.service-name:${spring.application.name:}}") String service,
+    public PermissionLookup igrpPermissionLookup(
             @Value("${igrp.security.application-code:}") String applicationCode,
             @Value("${igrp.access.api.base-url}") String amBaseUrl,
             @Value("${igrp.security.permission-fetch-timeout:5s}") Duration fetchTimeout,
-            ObjectProvider<StringRedisTemplate> redis,
-            ObjectProvider<Audit> audit,
-            ObjectProvider<PlatformTransactionManager> transactions) {
+            ObjectProvider<StringRedisTemplate> redis) {
         if (applicationCode.isBlank()) {
             throw new IllegalStateException("igrp.security.application-code (IGRP_SECURITY_APPLICATION_CODE) is "
                     + "required: it names the application whose permission set this service checks");
         }
+        return new PermissionLookup(redis.getIfAvailable(), amClient(amBaseUrl, fetchTimeout), applicationCode);
+    }
+
+    /** v3-08: a JWT becomes an authentication whose authorities are the caller's permission keys. */
+    @Bean
+    public PermissionAuthenticationConverter igrpPermissionAuthenticationConverter(PermissionLookup lookup) {
+        return new PermissionAuthenticationConverter(lookup);
+    }
+
+    @Bean
+    public RouteSecurity igrpRouteSecurity(
+            ApplicationContext context, Environment environment,
+            @Value("${igrp.security.service-name:${spring.application.name:}}") String service,
+            PermissionLookup lookup,
+            PermissionAuthenticationConverter converter,
+            ObjectProvider<Audit> audit,
+            ObjectProvider<PlatformTransactionManager> transactions) {
         List<String> publicPaths = Binder.get(environment)
                 .bind("igrp.security.public-paths", Bindable.listOf(String.class)).orElse(List.of());
-
-        PermissionLookup lookup = new PermissionLookup(redis.getIfAvailable(), amClient(amBaseUrl, fetchTimeout),
-                applicationCode);
         return new RouteSecurity(() -> new RouteResolver(service, handlerMappings(context), publicPaths),
-                lookup, accessAudit(audit.getIfAvailable(), transactions.getIfAvailable()));
+                lookup, converter, accessAudit(audit.getIfAvailable(), transactions.getIfAvailable()));
     }
 
     /** Replaces Spring Boot's default chain: the resource server, with the route security. */
@@ -77,7 +88,6 @@ public class RouteSecurityAutoConfiguration {
     @ConditionalOnDefaultServletWebSecurity
     public SecurityFilterChain igrpSecurityFilterChain(HttpSecurity http, RouteSecurity routeSecurity) {
         routeSecurity.apply(http);
-        http.oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()));
         return http.build();
     }
 

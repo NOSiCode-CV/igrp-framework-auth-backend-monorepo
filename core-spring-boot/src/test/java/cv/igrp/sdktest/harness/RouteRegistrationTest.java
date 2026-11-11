@@ -37,6 +37,7 @@ class RouteRegistrationTest extends AbstractStarterTest {
                 route("GET", "/ping", "starter-test.ping.list"),
                 // Public by public-paths at request time, but still a route of the service.
                 route("GET", "/infra/status", "starter-test.infra.status.list"),
+                route("GET", "/legacy/guarded", "starter-test.legacy.guarded.list"),
                 route("POST", "/notes", "starter-test.notes.create"),
                 route("POST", "/audit/commit", "starter-test.audit.commit.create"),
                 route("POST", "/audit/rollback", "starter-test.audit.rollback.create"),

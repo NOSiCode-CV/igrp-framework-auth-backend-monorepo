@@ -9,9 +9,11 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Whether a user holds a permission key in this service's application (v3-07). Reads the
@@ -53,7 +55,43 @@ public class PermissionLookup {
     }
 
     public Answer check(String sub, String token, String key) {
-        return fromRedis(sub, key).orElseGet(() -> fromAm(token, key));
+        return fromRedis(sub, key).orElseGet(() -> {
+            Fetch fetch = fetch(token);
+            if (fetch.answer() != Answer.ALLOWED) {
+                return fetch.answer();
+            }
+            return fetch.keys().contains(key) ? Answer.ALLOWED : Answer.DENIED;
+        });
+    }
+
+    /**
+     * The caller's whole permission set (v3-08), for method security on code with no route.
+     * Empty when neither Redis nor AM can give it: a check against it then denies.
+     */
+    public Set<String> permissions(String sub, String token) {
+        return setFromRedis(sub).orElseGet(() -> Set.copyOf(fetch(token).keys()));
+    }
+
+    private Optional<Set<String>> setFromRedis(String sub) {
+        if (redis == null) {
+            return Optional.empty();
+        }
+        try {
+            Set<String> members = redis.opsForSet().members(setKey(sub));
+            if (!members.contains(MARKER)) {
+                return Optional.empty();
+            }
+            Set<String> keys = new HashSet<>(members);
+            keys.remove(MARKER);
+            return Optional.of(Set.copyOf(keys));
+        } catch (RuntimeException ex) {
+            LOGGER.warn("[Route Filter] Redis unavailable, asking AM for the permissions of '{}': {}", sub, ex.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private String setKey(String sub) {
+        return "permissions:user:" + sub + ":app:" + applicationCode;
     }
 
     /** @return the answer from the set; empty on a miss or when Redis cannot be read */
@@ -62,8 +100,7 @@ public class PermissionLookup {
             return Optional.empty();
         }
         try {
-            Map<Object, Boolean> members = redis.opsForSet()
-                    .isMember("permissions:user:" + sub + ":app:" + applicationCode, MARKER, key);
+            Map<Object, Boolean> members = redis.opsForSet().isMember(setKey(sub), MARKER, key);
             if (members == null || !Boolean.TRUE.equals(members.get(MARKER))) {
                 return Optional.empty();
             }
@@ -74,7 +111,11 @@ public class PermissionLookup {
         }
     }
 
-    private Answer fromAm(String token, String key) {
+    /** AM's answer to the permission fetch: ALLOWED with the keys, or why there are none. */
+    private record Fetch(Answer answer, List<String> keys) {
+    }
+
+    private Fetch fetch(String token) {
         try {
             PermissionSet set = am.get()
                     .uri(uri -> uri.path("/api/users/me/permissions").queryParam("applicationCode", applicationCode).build())
@@ -82,18 +123,17 @@ public class PermissionLookup {
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .body(PermissionSet.class);
-            List<String> keys = set == null || set.keys() == null ? List.of() : set.keys();
-            return keys.contains(key) ? Answer.ALLOWED : Answer.DENIED;
+            return new Fetch(Answer.ALLOWED, set == null || set.keys() == null ? List.of() : set.keys());
         } catch (RestClientResponseException ex) {
             if (ex.getStatusCode().value() == HttpStatus.UNAUTHORIZED.value()) {
-                return Answer.UNAUTHENTICATED;
+                return new Fetch(Answer.UNAUTHENTICATED, List.of());
             }
             LOGGER.error("[Route Filter] AM answered HTTP {} to the permission fetch of application '{}'",
                     ex.getStatusCode().value(), applicationCode);
-            return Answer.UNAVAILABLE;
+            return new Fetch(Answer.UNAVAILABLE, List.of());
         } catch (RestClientException ex) {
             LOGGER.error("[Route Filter] AM unreachable for the permission fetch of application '{}'", applicationCode, ex);
-            return Answer.UNAVAILABLE;
+            return new Fetch(Answer.UNAVAILABLE, List.of());
         }
     }
 }

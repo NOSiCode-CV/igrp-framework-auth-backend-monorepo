@@ -38,15 +38,17 @@ class StarterHarnessTest extends AbstractStarterTest {
     void stubbedAccessManagement() {
         // StarterTestApplication lists no iGRP configuration and scans only its own package,
         // so these startup calls happen only if the starter arrived through the imports file.
-        // The starter takes a client_credentials token, then syncs with it.
+        // The starter takes a client_credentials token, then registers its routes with it.
         StubAccessManagement.Request token = AM.lastRequest("POST", "/oauth2/token");
         assertEquals("Basic " + Base64.getEncoder().encodeToString(
                 (CLIENT_ID + ":" + CLIENT_SECRET).getBytes(StandardCharsets.UTF_8)), token.header("Authorization"));
         assertTrue(token.body().contains("grant_type=client_credentials"), token.body());
 
-        StubAccessManagement.Request sync = AM.lastRequest("POST", "/api/m2m/sync/resources");
-        assertEquals("Bearer " + StubAccessManagement.ACCESS_TOKEN, sync.header("Authorization"));
-        assertTrue(sync.body().contains("\"name\":\"" + SERVICE_NAME + "\""), sync.body());
+        StubAccessManagement.Request register = AM.lastRequest("POST", "/api/routes/register");
+        assertEquals("Bearer " + StubAccessManagement.ACCESS_TOKEN, register.header("Authorization"));
+        assertTrue(register.body().contains("\"service\":\"" + SERVICE_NAME + "\""), register.body());
+        // v3-08: the legacy permission sync is gone from the 0.3 starter.
+        assertEquals(0, AM.count("POST", "/api/m2m/sync/permissions"));
     }
 
     @Test
