@@ -33,10 +33,9 @@ import java.util.Objects;
  * m2m.syncResources(resource, "my-service");
  * m2m.syncPermissions(permissions, "my-service");
  * }</pre>
- * The client library handles the token lifecycle. Pre-existing overloads
- * that accept a raw {@code m2mToken} are retained as {@link Deprecated} to
- * keep the API source-compatible — new callers should use the
- * client-credentials-aware variants.
+ * The client library handles the token lifecycle. The static {@code m2mToken}
+ * overloads (header {@code X-Machine-Auth-Token}) were removed in 0.3 (v3-18):
+ * every call authenticates with the client-credentials token.
  */
 public class M2MApi {
 
@@ -184,108 +183,4 @@ public class M2MApi {
         return headers;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    //  Legacy signatures — accept a raw token directly. Retained for
-    //  callers that haven't migrated to client-credentials yet. New code
-    //  should configure ApiClient.setClientCredentials(...) and use the
-    //  variants above.
-    // ─────────────────────────────────────────────────────────────────────
-
-    @Deprecated
-    public Object syncPermissions(List<PermissionDTO> permissions, String m2mToken, String serviceName)
-            throws ApiException, IOException, InterruptedException {
-        return apiClient.invokeAPIRaw("/api/m2m/sync/permissions", "POST", null,
-                Objects.nonNull(permissions) ? permissions : List.of(),
-                legacyHeaders(m2mToken, serviceName));
-    }
-
-    @Deprecated
-    public Object syncResources(ResourceDTO resource, String m2mToken, String serviceName)
-            throws ApiException, IOException, InterruptedException {
-        return apiClient.invokeAPIRaw("/api/m2m/sync/resources", "POST", null, resource,
-                legacyHeaders(m2mToken, serviceName));
-    }
-
-    @Deprecated
-    public Object syncApplication(ApplicationDTO application, String m2mToken, String serviceName)
-            throws ApiException, IOException, InterruptedException {
-        return apiClient.invokeAPIRaw("/api/m2m/sync/applications", "POST", null, application,
-                legacyHeaders(m2mToken, serviceName));
-    }
-
-    @Deprecated
-    public Object syncApplicationMenus(String applicationCode, List<MenuEntryDTO> menus,
-                                       String m2mToken, String serviceName)
-            throws ApiException, IOException, InterruptedException {
-        return syncApplicationMenus(applicationCode, menus, (Boolean) null, m2mToken, serviceName);
-    }
-
-    @Deprecated
-    public Object syncApplicationMenus(String applicationCode, List<MenuEntryDTO> menus, Boolean syncRoles,
-                                       String m2mToken, String serviceName)
-            throws ApiException, IOException, InterruptedException {
-        Map<String, String> queryParams = null;
-        if (syncRoles != null) {
-            queryParams = new HashMap<>();
-            queryParams.put("syncRoles", syncRoles.toString());
-        }
-        return apiClient.invokeAPIRaw("/api/m2m/sync/applications/%s/menus".formatted(applicationCode), "POST",
-                queryParams, menus, legacyHeaders(m2mToken, serviceName));
-    }
-
-    @Deprecated
-    public List<IGRPUserDTO> getUsers(boolean activeOnly, String applicationCode, String departmentCode,
-                                      String roleCode, String permissionName,
-                                      boolean includeChildrenDepartments, boolean includeChildrenRoles,
-                                      List<String> identifiers, String m2mToken, String serviceName)
-            throws ApiException, IOException, InterruptedException {
-        Map<String, String> queryParams = new HashMap<>();
-        if (activeOnly) queryParams.put("activeOnly", "true");
-        if (applicationCode != null) queryParams.put("applicationCode", applicationCode);
-        if (departmentCode != null) queryParams.put("departmentCode", departmentCode);
-        if (roleCode != null) queryParams.put("roleCode", roleCode);
-        if (permissionName != null) queryParams.put("permissionName", permissionName);
-        if (includeChildrenDepartments) queryParams.put("includeChildrenDepartments", "true");
-        if (includeChildrenRoles) queryParams.put("includeChildrenRoles", "true");
-        String response = apiClient.invokeAPIRaw("/api/m2m/users", "POST", queryParams,
-                Objects.nonNull(identifiers) ? identifiers : List.of(),
-                legacyHeaders(m2mToken, serviceName));
-        return JsonUtil.deserialize(response, new TypeReference<>() {});
-    }
-
-    @Deprecated
-    public List<DepartmentDTO> getDepartments(boolean activeOnly, String parentCode,
-                                              boolean includeChildrenDepartments,
-                                              List<String> identifiers, String m2mToken, String serviceName)
-            throws IOException, InterruptedException, ApiException {
-        Map<String, String> queryParams = new HashMap<>();
-        if (activeOnly) queryParams.put("activeOnly", "true");
-        if (parentCode != null) queryParams.put("parentCode", parentCode);
-        if (includeChildrenDepartments) queryParams.put("includeChildrenDepartments", "true");
-        String response = apiClient.invokeAPIRaw("/api/m2m/departments", "POST", queryParams,
-                Objects.nonNull(identifiers) ? identifiers : List.of(),
-                legacyHeaders(m2mToken, serviceName));
-        return JsonUtil.deserialize(response, new TypeReference<>() {});
-    }
-
-    @Deprecated
-    public List<RoleDTO> getRoles(boolean activeOnly, String parentCode, boolean includeChildrenRoles,
-                                  List<String> identifiers, String m2mToken, String serviceName)
-            throws IOException, InterruptedException, ApiException {
-        Map<String, String> queryParams = new HashMap<>();
-        if (activeOnly) queryParams.put("activeOnly", "true");
-        if (parentCode != null) queryParams.put("parentCode", parentCode);
-        if (includeChildrenRoles) queryParams.put("includeChildrenRoles", "true");
-        String response = apiClient.invokeAPIRaw("/api/m2m/roles", "POST", queryParams,
-                Objects.nonNull(identifiers) ? identifiers : List.of(),
-                legacyHeaders(m2mToken, serviceName));
-        return JsonUtil.deserialize(response, new TypeReference<>() {});
-    }
-
-    private Map<String, String> legacyHeaders(String m2mToken, String serviceName) {
-        Map<String, String> headers = new HashMap<>();
-        if (serviceName != null) headers.put(SERVICE_HEADER, serviceName);
-        if (m2mToken != null) headers.put("X-Machine-Auth-Token", m2mToken);
-        return headers;
-    }
 }

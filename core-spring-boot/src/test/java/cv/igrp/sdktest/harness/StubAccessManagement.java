@@ -68,6 +68,11 @@ public final class StubAccessManagement {
         responses.put(method + " " + path, new Response(status, jsonBody));
     }
 
+    /** How many {@code method path} requests AM has received so far. */
+    public long count(String method, String path) {
+        return requests.stream().filter(r -> r.method().equals(method) && r.path().equals(path)).count();
+    }
+
     /** The most recent {@code method path} request; fails listing what was received when there is none. */
     public Request lastRequest(String method, String path) {
         return requests.reversed().stream()

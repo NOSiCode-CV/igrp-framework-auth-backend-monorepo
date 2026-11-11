@@ -30,11 +30,8 @@ import java.util.List;
  * igrp.access.m2m.scope         = m2m
  * }</pre>
  *
- * <p>The legacy static-token property
- * {@code igrp.access.m2m.sync-token} is still read for backwards
- * compatibility; when only the legacy token is set the runner falls
- * back to the deprecated {@code M2MApi} signatures. New deployments
- * should use the client-credentials properties.
+ * <p>Without client credentials the sync is skipped. The legacy static
+ * {@code igrp.access.m2m.sync-token} is no longer read (v3-18).
  */
 public class AuthorizationSyncRunner {
 
@@ -50,11 +47,6 @@ public class AuthorizationSyncRunner {
 
     @Value("${igrp.access.m2m.scope:}")
     private String scope;
-
-    /** @deprecated retained for callers still on the static-token model. */
-    @Deprecated
-    @Value("${igrp.access.m2m.sync-token:}")
-    private String legacyM2mToken;
 
     @Value("${igrp.security.service-name:${spring.application.name:}}")
     private String applicationName;
@@ -75,18 +67,18 @@ public class AuthorizationSyncRunner {
             boolean useClientCredentials = clientId != null && !clientId.isBlank()
                     && clientSecret != null && !clientSecret.isBlank();
 
-            if (useClientCredentials) {
-                if (scope != null && !scope.isBlank()) {
-                    accessClient.setClientCredentials(clientId, clientSecret, scope);
-                } else {
-                    accessClient.setClientCredentials(clientId, clientSecret);
-                }
-                LOGGER.info("[Authorization Sync] Authenticating to Access Management via client_credentials grant (clientId={})", clientId);
-            } else {
-                LOGGER.warn("[Authorization Sync] No client_credentials configured ({}={}, {}={}). Falling back to deprecated static-token mode.",
+            if (!useClientCredentials) {
+                LOGGER.warn("[Authorization Sync] Skipped: no client_credentials configured ({}={}, {}={}).",
                         "igrp.access.m2m.client-id", maskBlank(clientId),
                         "igrp.access.m2m.client-secret", clientSecret == null || clientSecret.isBlank() ? "(blank)" : "(set)");
+                return;
             }
+            if (scope != null && !scope.isBlank()) {
+                accessClient.setClientCredentials(clientId, clientSecret, scope);
+            } else {
+                accessClient.setClientCredentials(clientId, clientSecret);
+            }
+            LOGGER.info("[Authorization Sync] Authenticating to Access Management via client_credentials grant (clientId={})", clientId);
 
             List<PermissionDTO> permissions = Arrays.stream(PermissionsRegistry.Permission.values())
                     .map(p -> {
@@ -107,23 +99,13 @@ public class AuthorizationSyncRunner {
 
             LOGGER.info("[Authorization Sync] Synchronizing resource for application '{}'", applicationName);
 
-            if (useClientCredentials) {
-                m2mApi.syncResources(resource, applicationName);
-            } else {
-                //noinspection deprecation — legacy path until callers migrate.
-                m2mApi.syncResources(resource, legacyM2mToken, applicationName);
-            }
+            m2mApi.syncResources(resource, applicationName);
 
             LOGGER.info("[Authorization Sync] Resource synchronization completed.");
 
             LOGGER.info("[Authorization Sync] Synchronizing {} permissions for application '{}'", permissions.size(), applicationName);
 
-            if (useClientCredentials) {
-                m2mApi.syncPermissions(permissions, applicationName);
-            } else {
-                //noinspection deprecation — legacy path until callers migrate.
-                m2mApi.syncPermissions(permissions, legacyM2mToken, applicationName);
-            }
+            m2mApi.syncPermissions(permissions, applicationName);
 
             LOGGER.info("[Permission Sync] Successfully synchronized {} permissions.", permissions.size());
 
