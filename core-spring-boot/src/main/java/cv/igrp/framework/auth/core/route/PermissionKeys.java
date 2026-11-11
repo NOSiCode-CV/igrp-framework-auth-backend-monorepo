@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * The key convention, {@code {service}.{resource path}.{action}}: one pure function,
@@ -110,5 +111,24 @@ public final class PermissionKeys {
             }
         }
         return true;
+    }
+
+    /**
+     * What is wrong with a key written by hand ({@code @Permission}, {@code @FieldPermission}):
+     * it must be in the service's own namespace, {@code {service}.{resource}.{action}}, with an
+     * action from {@link #ACTIONS}. Empty when the key is fine.
+     */
+    public static List<String> problems(String service, String key) {
+        List<String> problems = new ArrayList<>();
+        String prefix = service + ".";
+        if (!key.startsWith(prefix) || key.indexOf('.', prefix.length()) < 0) {
+            problems.add("must have the form " + prefix + "{resource}.{action}, in this service's own namespace '"
+                    + service + "'");
+        }
+        String action = actionOf(key);
+        if (!ACTIONS.contains(action)) {
+            problems.add("has action '" + action + "', which is not one of " + new TreeSet<>(ACTIONS));
+        }
+        return problems;
     }
 }

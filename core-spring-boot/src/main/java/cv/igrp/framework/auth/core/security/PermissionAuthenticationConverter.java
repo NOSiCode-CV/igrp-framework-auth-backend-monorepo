@@ -49,22 +49,23 @@ public class PermissionAuthenticationConverter implements Converter<Jwt, Abstrac
         @Serial
         private static final long serialVersionUID = 1L;
 
-        private final transient Supplier<List<GrantedAuthority>> permissions;
+        private final transient Supplier<List<GrantedAuthority>> authorities;
 
         PermissionAuthentication(Jwt jwt, Supplier<List<GrantedAuthority>> permissions) {
             // The bearer factor, as Spring Security's own converter gives it. The keys come later.
             super(jwt, List.of(FactorGrantedAuthority.fromAuthority(BEARER_FACTOR)),
                     Objects.requireNonNull(jwt.getSubject(), "A token without sub has no permission set"));
-            this.permissions = SingletonSupplier.of(permissions);
+            // Built once: field filtering asks for the authorities for every guarded field it writes.
+            this.authorities = SingletonSupplier.of(() -> {
+                List<GrantedAuthority> all = new ArrayList<>(super.getAuthorities());
+                all.addAll(permissions.get());
+                return Collections.unmodifiableList(all);
+            });
         }
 
         @Override
         public Collection<GrantedAuthority> getAuthorities() {
-            List<GrantedAuthority> all = new ArrayList<>(super.getAuthorities());
-            if (permissions != null) {
-                all.addAll(permissions.get());
-            }
-            return Collections.unmodifiableList(all);
+            return authorities == null ? super.getAuthorities() : authorities.get();
         }
 
         @Override

@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -129,17 +128,8 @@ public final class RouteCatalog {
     }
 
     private static void checkAnnotatedKey(String service, Route route, List<String> errors) {
-        String key = route.key();
-        String prefix = service + ".";
-        if (!key.startsWith(prefix) || key.indexOf('.', prefix.length()) < 0) {
-            errors.add(route.label() + ": @Permission(\"" + key + "\") must have the form "
-                    + prefix + "{resource}.{action}, in this service's own namespace '" + service + "'");
-        }
-        String action = PermissionKeys.actionOf(key);
-        if (!PermissionKeys.ACTIONS.contains(action)) {
-            errors.add(route.label() + ": @Permission(\"" + key + "\") has action '" + action
-                    + "', which is not one of " + new TreeSet<>(PermissionKeys.ACTIONS));
-        }
+        PermissionKeys.problems(service, route.key()).forEach(problem ->
+                errors.add(route.label() + ": @Permission(\"" + route.key() + "\") " + problem));
     }
 
     private static String blankToNull(String value) {

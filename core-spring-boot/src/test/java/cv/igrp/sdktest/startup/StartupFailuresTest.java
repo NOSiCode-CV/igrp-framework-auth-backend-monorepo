@@ -4,6 +4,7 @@ import cv.igrp.sdktest.startup.action.ActionApp;
 import cv.igrp.sdktest.startup.derivedreuse.DerivedReuseApp;
 import cv.igrp.sdktest.startup.prefix.PrefixApp;
 import cv.igrp.sdktest.startup.reuse.ReuseApp;
+import cv.igrp.sdktest.startup.fieldkey.FieldKeyApp;
 import cv.igrp.sdktest.startup.ownchain.OwnChainApp;
 import cv.igrp.sdktest.startup.ownchainapplied.OwnChainAppliedApp;
 import cv.igrp.sdktest.startup.servicename.ServiceNameApp;
@@ -66,6 +67,12 @@ class StartupFailuresTest {
         String[] args = Stream.concat(Arrays.stream(BASE_ARGS_WITHOUT_VERSION),
                 Stream.of("--igrp.security.service-name=billing")).toArray(String[]::new);
         assertStartupFails(ServiceNameApp.class, args, "igrp.security.service-version");
+    }
+
+    @Test
+    @DisplayName("Refuses to start when a @FieldPermission key is outside the service's namespace")
+    void fieldKeyPrefix() {
+        assertStartupFails(FieldKeyApp.class, "@FieldPermission(\"other-service.faturas.margem.read\")", "failing-test");
     }
 
     @Test

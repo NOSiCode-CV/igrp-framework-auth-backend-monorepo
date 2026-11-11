@@ -1,6 +1,7 @@
 package cv.igrp.framework.auth.core.autoconfig;
 
 import cv.igrp.framework.auth.core.audit.CorrelationIds;
+import cv.igrp.framework.auth.core.field.FieldPermissionModule;
 import cv.igrp.framework.auth.core.security.AuthenticationHelper;
 import cv.igrp.framework.auth.core.route.RouteCatalog;
 import cv.igrp.framework.auth.core.route.RouteRegistrar;
@@ -52,6 +53,13 @@ public class AutoConfiguration {
             }
         }
         return client;
+    }
+
+    /** v3-16: hides {@code @FieldPermission} fields from callers without the key, in every response. */
+    @Bean
+    @ConditionalOnMissingBean
+    public FieldPermissionModule fieldPermissionModule() {
+        return new FieldPermissionModule();
     }
 
     @Bean
