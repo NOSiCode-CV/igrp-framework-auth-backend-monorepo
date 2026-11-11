@@ -111,6 +111,9 @@ public class AuthorizationSyncRunner {
 
             LOGGER.info("[Permission Sync] Successfully synchronized {} permissions.", permissions.size());
 
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            LOGGER.error("[Permission Sync] Interrupted while synchronizing authorization with Access Management API", ex);
         } catch (Exception ex) {
             LOGGER.error("[Permission Sync] Failed to synchronize authorization with Access Management API", ex);
         }

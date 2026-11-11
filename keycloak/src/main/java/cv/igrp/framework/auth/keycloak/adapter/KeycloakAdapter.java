@@ -819,7 +819,7 @@ public class KeycloakAdapter implements IAdapter {
                         info.setStatus("ACTIVE");
                         return info;
                     })
-                    .collect(Collectors.toList());
+                    .toList();
         } catch (Exception ex) {
             LOGGER.error("Failed to retrieve all departments", ex);
             throw new IAMException("Error retrieving departments", ex);
@@ -873,7 +873,7 @@ public class KeycloakAdapter implements IAdapter {
                         LOGGER.info("[getAllApplications] ApplicationInfo built: {}", info);
                         return info;
                     })
-                    .collect(Collectors.toList());
+                    .toList();
             LOGGER.info("[getAllApplications] Returning {} applications", result.size());
             return result;
         } catch (Exception ex) {
@@ -935,7 +935,7 @@ public class KeycloakAdapter implements IAdapter {
                         LOGGER.info("[getAllRoles] RoleInfo built: {}", info);
                         return info;
                     })
-                    .collect(Collectors.toList());
+                    .toList();
             LOGGER.info("[getAllRoles] Returning {} roles", result.size());
             return result;
         } catch (Exception ex) {
@@ -1088,7 +1088,7 @@ public class KeycloakAdapter implements IAdapter {
                         LOGGER.info("[getAllPermissions] PermissionInfo built: {}", info);
                         return info;
                     })
-                    .collect(Collectors.toList());
+                    .toList();
             LOGGER.info("[getAllPermissions] Returning {} permissions", result.size());
             return result;
         } catch (Exception ex) {
@@ -1393,7 +1393,7 @@ public class KeycloakAdapter implements IAdapter {
                         LOGGER.info("[getAllResources] ResourceInfo built: {}", info);
                         return info;
                     })
-                    .collect(Collectors.toList());
+                    .toList();
             LOGGER.info("[getAllResources] Returning {} resources", result.size());
             return result;
         } catch (Exception ex) {
