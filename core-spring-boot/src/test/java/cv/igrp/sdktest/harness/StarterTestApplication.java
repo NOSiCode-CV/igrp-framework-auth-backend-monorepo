@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -128,6 +129,28 @@ public class StarterTestApplication {
         @GetMapping("/views/faturas/{id}")
         InvoiceView read(@PathVariable long id) {
             return invoice(id);
+        }
+    }
+
+    /** v3-14: lists and reads of a scoped entity; the starter filters them, the controller does nothing. */
+    @RestController
+    static class ScopedInvoiceController {
+
+        private final ScopedInvoiceRepository invoices;
+
+        ScopedInvoiceController(ScopedInvoiceRepository invoices) {
+            this.invoices = invoices;
+        }
+
+        @GetMapping("/scoped/faturas")
+        List<Long> list() {
+            return invoices.findAll().stream().map(ScopedInvoice::getId).sorted().toList();
+        }
+
+        @GetMapping("/scoped/faturas/{id}")
+        Long read(@PathVariable long id) {
+            return invoices.findById(id).map(ScopedInvoice::getId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         }
     }
 

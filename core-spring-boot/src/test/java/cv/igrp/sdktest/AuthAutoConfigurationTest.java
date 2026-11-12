@@ -55,7 +55,7 @@ class AuthAutoConfigurationTest {
                     return type != null && type.getName().startsWith("cv.igrp.")
                             && !type.getName().startsWith("cv.igrp.sdktest")
                             && !name.contains(".")
-                            && !type.getSimpleName().contains("AutoConfiguration")
+                            && !type.getName().contains("AutoConfiguration")
                             && !type.getSimpleName().startsWith("MethodSecurity");
                 })
                 .collect(Collectors.toCollection(TreeSet::new));

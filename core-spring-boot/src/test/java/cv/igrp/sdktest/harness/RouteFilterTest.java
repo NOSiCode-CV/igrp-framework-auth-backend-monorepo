@@ -11,7 +11,6 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -37,8 +36,7 @@ class RouteFilterTest extends AbstractStarterTest {
     /** Writes the set as AM does: the keys plus the marker, which makes an empty set a hit. */
     private String cachedUser(String... keys) {
         String sub = "user-" + UUID.randomUUID();
-        redis.opsForSet().add("permissions:user:" + sub + ":app:" + APPLICATION_CODE,
-                Stream.concat(Stream.of("~"), Stream.of(keys)).toArray(String[]::new));
+        writePermissionSet(redis, sub, keys);
         return sub;
     }
 

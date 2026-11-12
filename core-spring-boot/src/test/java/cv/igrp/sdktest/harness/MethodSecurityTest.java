@@ -15,7 +15,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -53,8 +52,7 @@ class MethodSecurityTest extends AbstractStarterTest {
 
     private String cachedUser(String... keys) {
         String sub = "user-" + UUID.randomUUID();
-        redis.opsForSet().add("permissions:user:" + sub + ":app:" + APPLICATION_CODE,
-                Stream.concat(Stream.of("~"), Stream.of(keys)).toArray(String[]::new));
+        writePermissionSet(redis, sub, keys);
         return sub;
     }
 

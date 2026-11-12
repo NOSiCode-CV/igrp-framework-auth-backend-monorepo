@@ -40,6 +40,8 @@ class RouteRegistrationTest extends AbstractStarterTest {
                 route("GET", "/legacy/guarded", "starter-test.legacy.guarded.list"),
                 route("GET", "/views/faturas", "starter-test.views.faturas.list"),
                 route("GET", "/views/faturas/{id}", "starter-test.views.faturas.read"),
+                route("GET", "/scoped/faturas", "starter-test.scoped.faturas.list"),
+                route("GET", "/scoped/faturas/{id}", "starter-test.scoped.faturas.read"),
                 route("POST", "/notes", "starter-test.notes.create"),
                 route("POST", "/audit/commit", "starter-test.audit.commit.create"),
                 route("POST", "/audit/rollback", "starter-test.audit.rollback.create"),
