@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import cv.igrp.framework.auth.core.scope.IgrpScope;
 import cv.igrp.framework.auth.core.security.RootAccess;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -53,6 +54,7 @@ public class RouteDecisionFilter extends OncePerRequestFilter {
         String method = request.getMethod();
         String path = request.getRequestURI();
         if (RootAccess.isRoot(jwt)) {
+            IgrpScope.bind(IgrpScope.Context.EVERYTHING);
             audit.root(method, path, resolution.key());
             chain.doFilter(request, response);
             return;
@@ -61,8 +63,17 @@ public class RouteDecisionFilter extends OncePerRequestFilter {
             audit.denied(method, path, null);
             throw new AccessDeniedException("Not a route of this service");
         }
-        switch (lookup.check(jwt.getSubject(), jwt.getTokenValue(), resolution.key())) {
-            case ALLOWED -> chain.doFilter(request, response);
+        PermissionLookup.Access access = lookup.access(jwt.getSubject(), jwt.getTokenValue(), resolution.key());
+        switch (access.answer()) {
+            case ALLOWED -> {
+                if (access.scope() == null) {
+                    // v3-14: a key with no scope, or an unknown scope code, shows no rows by a guess.
+                    audit.denied(method, path, resolution.key());
+                    throw new AccessDeniedException("No valid data scope for " + resolution.key());
+                }
+                IgrpScope.bind(access.scope());
+                chain.doFilter(request, response);
+            }
             case DENIED -> {
                 audit.denied(method, path, resolution.key());
                 throw new AccessDeniedException("Missing permission " + resolution.key());

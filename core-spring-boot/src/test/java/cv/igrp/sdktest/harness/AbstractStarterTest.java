@@ -4,14 +4,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Base class for tests that drive the starter over HTTP: {@link StarterTestApplication}
@@ -37,7 +41,8 @@ public abstract class AbstractStarterTest {
             "starter-test.audit.rollback.create", "starter-test.correlation.list",
             "starter-test.correlation.call-am.list", "starter-test.faturas.list", "starter-test.faturas.read",
             "starter-test.faturas.aprovar.update", "starter-test.infra.status.list",
-            "starter-test.legacy.guarded.list", "starter-test.views.faturas.list", "starter-test.views.faturas.read");
+            "starter-test.legacy.guarded.list", "starter-test.views.faturas.list", "starter-test.views.faturas.read",
+            "starter-test.scoped.faturas.list", "starter-test.scoped.faturas.read");
 
     protected static final StubAccessManagement AM = StubAccessManagement.start();
 
@@ -78,8 +83,35 @@ public abstract class AbstractStarterTest {
         AM.stub("GET", "/api/users/me/permissions", 200, permissionSet(ALL_KEYS));
     }
 
+    /** AM's fetch answer for these keys, each with scope {@code all}. */
     protected static String permissionSet(List<String> keys) {
-        return "{\"keys\":[" + keys.stream().map(key -> "\"" + key + "\"")
-                .collect(Collectors.joining(",")) + "],\"scopes\":{}}";
+        return "{\"keys\":[" + keys.stream().map(key -> "\"" + key + "\"").collect(Collectors.joining(","))
+                + "],\"scopes\":{" + keys.stream().map(key -> "\"" + key + "\":\"all\"").collect(Collectors.joining(","))
+                + "},\"roles\":[],\"departments\":[]}";
+    }
+
+    /** Writes a user's set as AM does: the keys plus the marker, and each key's scope ({@code all}). */
+    protected static void writePermissionSet(StringRedisTemplate redis, String sub, String... keys) {
+        Map<String, String> scopes = new HashMap<>();
+        for (String key : keys) {
+            scopes.put(key, "all");
+        }
+        writePermissionSet(redis, sub, scopes, List.of(), List.of());
+    }
+
+    /** Writes a user's set with explicit scopes, role codes and visible departments (v3-14). */
+    protected static void writePermissionSet(StringRedisTemplate redis, String sub, Map<String, String> scopes,
+                                             List<String> roles, List<String> departments) {
+        String set = "permissions:user:" + sub + ":app:" + APPLICATION_CODE;
+        redis.opsForSet().add(set, Stream.concat(Stream.of("~"), scopes.keySet().stream()).toArray(String[]::new));
+        if (!scopes.isEmpty()) {
+            redis.opsForHash().putAll(set + ":scopes", scopes);
+        }
+        if (!roles.isEmpty()) {
+            redis.opsForSet().add(set + ":roles", roles.toArray(String[]::new));
+        }
+        if (!departments.isEmpty()) {
+            redis.opsForSet().add(set + ":departments", departments.toArray(String[]::new));
+        }
     }
 }

@@ -14,7 +14,6 @@ import tools.jackson.databind.json.JsonMapper;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -50,8 +49,7 @@ class FieldPermissionTest extends AbstractStarterTest {
 
     private RequestPostProcessor caller(boolean root, String... keys) {
         String sub = "user-" + UUID.randomUUID();
-        redis.opsForSet().add("permissions:user:" + sub + ":app:" + APPLICATION_CODE,
-                Stream.concat(Stream.of("~"), Stream.of(keys)).toArray(String[]::new));
+        writePermissionSet(redis, sub, keys);
         Jwt.Builder token = Jwt.withTokenValue("token-of-" + sub).header("alg", "none").subject(sub)
                 .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(60));
         if (root) {

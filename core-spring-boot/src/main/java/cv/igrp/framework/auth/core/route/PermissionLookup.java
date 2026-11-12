@@ -1,5 +1,6 @@
 package cv.igrp.framework.auth.core.route;
 
+import cv.igrp.framework.auth.core.scope.IgrpScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -22,7 +23,9 @@ import java.util.Set;
  *
  * <p>Redis contract (#14): the Set {@code permissions:user:{sub}:app:{appCode}} holds the
  * keys plus the marker {@value #MARKER}, so a written set always exists. The set exists:
- * a hit, even with no keys. It does not exist: a miss.
+ * a hit, even with no keys. It does not exist: a miss. Next to it, written with it (v3-14):
+ * the Hash {@code ...:scopes} (key to scope), and the Sets {@code ...:roles} (the caller's
+ * role codes) and {@code ...:departments} (its visible department subtree).
  */
 public class PermissionLookup {
 
@@ -40,8 +43,15 @@ public class PermissionLookup {
         UNAVAILABLE
     }
 
-    /** The body of {@code GET /api/users/me/permissions}; scopes are read by the scope filter. */
-    record PermissionSet(List<String> keys, Map<String, String> scopes) {
+    /** The body of {@code GET /api/users/me/permissions}; roles and departments feed the data scopes. */
+    record PermissionSet(List<String> keys, Map<String, String> scopes, List<String> roles, List<String> departments) {
+    }
+
+    /**
+     * The decision on one key and, when allowed, the data scope that comes with it (v3-14);
+     * {@code scope} is {@code null} when the key's scope is missing or has an unknown code.
+     */
+    public record Access(Answer answer, IgrpScope.Context scope) {
     }
 
     private final StringRedisTemplate redis;
@@ -55,12 +65,21 @@ public class PermissionLookup {
     }
 
     public Answer check(String sub, String token, String key) {
+        return access(sub, token, key).answer();
+    }
+
+    /** Whether the caller holds the key, and with which data scope. */
+    public Access access(String sub, String token, String key) {
         return fromRedis(sub, key).orElseGet(() -> {
             Fetch fetch = fetch(token);
             if (fetch.answer() != Answer.ALLOWED) {
-                return fetch.answer();
+                return new Access(fetch.answer(), null);
             }
-            return fetch.keys().contains(key) ? Answer.ALLOWED : Answer.DENIED;
+            if (!fetch.keys().contains(key)) {
+                return new Access(Answer.DENIED, null);
+            }
+            return new Access(Answer.ALLOWED,
+                    IgrpScope.from(fetch.scopes().get(key), sub, fetch.roles(), fetch.departments()));
         });
     }
 
@@ -95,7 +114,7 @@ public class PermissionLookup {
     }
 
     /** @return the answer from the set; empty on a miss or when Redis cannot be read */
-    private Optional<Answer> fromRedis(String sub, String key) {
+    private Optional<Access> fromRedis(String sub, String key) {
         if (redis == null) {
             return Optional.empty();
         }
@@ -104,15 +123,26 @@ public class PermissionLookup {
             if (members == null || !Boolean.TRUE.equals(members.get(MARKER))) {
                 return Optional.empty();
             }
-            return Optional.of(Boolean.TRUE.equals(members.get(key)) ? Answer.ALLOWED : Answer.DENIED);
+            if (!Boolean.TRUE.equals(members.get(key))) {
+                return Optional.of(new Access(Answer.DENIED, null));
+            }
+            String set = setKey(sub);
+            Object scope = redis.opsForHash().get(set + ":scopes", key);
+            return Optional.of(new Access(Answer.ALLOWED, IgrpScope.from(scope == null ? null : scope.toString(), sub,
+                    redis.opsForSet().members(set + ":roles"), redis.opsForSet().members(set + ":departments"))));
         } catch (RuntimeException ex) {
             LOGGER.warn("[Route Filter] Redis unavailable, asking AM for the permissions of '{}': {}", sub, ex.getMessage());
             return Optional.empty();
         }
     }
 
-    /** AM's answer to the permission fetch: ALLOWED with the keys, or why there are none. */
-    private record Fetch(Answer answer, List<String> keys) {
+    /** AM's answer to the permission fetch: ALLOWED with the set, or why there is none. */
+    private record Fetch(Answer answer, List<String> keys, Map<String, String> scopes, List<String> roles,
+                         List<String> departments) {
+
+        static Fetch refused(Answer answer) {
+            return new Fetch(answer, List.of(), Map.of(), List.of(), List.of());
+        }
     }
 
     private Fetch fetch(String token) {
@@ -123,17 +153,25 @@ public class PermissionLookup {
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .body(PermissionSet.class);
-            return new Fetch(Answer.ALLOWED, set == null || set.keys() == null ? List.of() : set.keys());
+            if (set == null) {
+                return new Fetch(Answer.ALLOWED, List.of(), Map.of(), List.of(), List.of());
+            }
+            return new Fetch(Answer.ALLOWED, orEmpty(set.keys()), set.scopes() == null ? Map.of() : set.scopes(),
+                    orEmpty(set.roles()), orEmpty(set.departments()));
         } catch (RestClientResponseException ex) {
             if (ex.getStatusCode().value() == HttpStatus.UNAUTHORIZED.value()) {
-                return new Fetch(Answer.UNAUTHENTICATED, List.of());
+                return Fetch.refused(Answer.UNAUTHENTICATED);
             }
             LOGGER.error("[Route Filter] AM answered HTTP {} to the permission fetch of application '{}'",
                     ex.getStatusCode().value(), applicationCode);
-            return new Fetch(Answer.UNAVAILABLE, List.of());
+            return Fetch.refused(Answer.UNAVAILABLE);
         } catch (RestClientException ex) {
             LOGGER.error("[Route Filter] AM unreachable for the permission fetch of application '{}'", applicationCode, ex);
-            return new Fetch(Answer.UNAVAILABLE, List.of());
+            return Fetch.refused(Answer.UNAVAILABLE);
         }
+    }
+
+    private static List<String> orEmpty(List<String> values) {
+        return values == null ? List.of() : values;
     }
 }
