@@ -11,7 +11,10 @@ import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 /**
  * Data scopes (v3-14) for services with JPA on Hibernate: every transaction turns the scope
@@ -23,6 +26,10 @@ import java.util.List;
 @org.springframework.boot.autoconfigure.AutoConfiguration
 @ConditionalOnClass({EntityManagerFactory.class, SessionFactoryImplementor.class, JpaTransactionManager.class})
 public class ScopeAutoConfiguration {
+
+    private ScopeAutoConfiguration() {
+        // Only a static infrastructure bean.
+    }
 
     @Bean
     static BeanPostProcessor igrpScopeJpaHooks() {
@@ -53,15 +60,17 @@ public class ScopeAutoConfiguration {
         return PersistenceManagedTypes.of(types.getManagedClassNames(), packages);
     }
 
+    private static final Set<SessionFactoryImplementor> REGISTERED = Collections.newSetFromMap(new WeakHashMap<>());
+
     /** Once per session factory, however many times the factory is post-processed. */
     static void registerListeners(EntityManagerFactory factory) {
-        EventListenerRegistry registry = factory.unwrap(SessionFactoryImplementor.class).getServiceRegistry()
-                .requireService(EventListenerRegistry.class);
-        for (Object listener : registry.getEventListenerGroup(EventType.POST_LOAD).listeners()) {
-            if (listener instanceof UnscopedLoadWarning) {
+        SessionFactoryImplementor sessionFactory = factory.unwrap(SessionFactoryImplementor.class);
+        synchronized (REGISTERED) {
+            if (!REGISTERED.add(sessionFactory)) {
                 return;
             }
         }
+        EventListenerRegistry registry = sessionFactory.getServiceRegistry().requireService(EventListenerRegistry.class);
         registry.appendListeners(EventType.POST_LOAD, new UnscopedLoadWarning());
         registry.appendListeners(EventType.LOAD, new ScopedLoadByKey());
     }

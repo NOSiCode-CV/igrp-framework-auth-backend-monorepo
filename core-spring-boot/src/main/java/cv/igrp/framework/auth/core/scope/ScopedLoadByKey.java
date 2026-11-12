@@ -3,7 +3,6 @@ package cv.igrp.framework.auth.core.scope;
 import org.hibernate.event.spi.EventSource;
 import org.hibernate.event.spi.LoadEvent;
 import org.hibernate.event.spi.LoadEventListener;
-import org.hibernate.query.QueryFlushMode;
 
 /**
  * Reads by id ({@code find}, {@code findById}) ignore Hibernate filters, so a guessed id could
@@ -25,7 +24,6 @@ public class ScopedLoadByKey implements LoadEventListener {
         Long visible = session.createSelectionQuery(
                         "select count(e) from " + event.getEntityClassName() + " e where id(e) = :id", Long.class)
                 .setParameter("id", event.getEntityId())
-                .setQueryFlushMode(QueryFlushMode.NO_FLUSH)
                 .getSingleResult();
         if (visible == 0) {
             session.evict(entity);
