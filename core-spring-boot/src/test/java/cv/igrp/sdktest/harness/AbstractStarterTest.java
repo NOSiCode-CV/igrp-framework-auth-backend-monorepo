@@ -46,9 +46,21 @@ public abstract class AbstractStarterTest {
 
     protected static final StubAccessManagement AM = StubAccessManagement.start();
 
+    /** v3-09: the read-only user the Redis ACL gives services, as in every deployment. */
+    protected static final String REDIS_READER = "igrp-reader";
+    protected static final String REDIS_READER_PASSWORD = "reader-secret";
+
+    /**
+     * The shared Redis, with the services' read-only user. The test writes the sets as AM does,
+     * through the service's own connection ({@code spring.data.redis.*}, the default user); the
+     * starter reads through its own connection, as the reader.
+     */
     @SuppressWarnings("resource")
     protected static final GenericContainer<?> REDIS =
-            new GenericContainer<>(DockerImageName.parse("redis:7-alpine")).withExposedPorts(6379);
+            new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+                    .withExposedPorts(6379)
+                    .withCommand("redis-server", "--user", REDIS_READER, "on", ">" + REDIS_READER_PASSWORD,
+                            "resetkeys", "~permissions:*", "resetchannels", "-@all", "+@read", "+ping");
 
     static {
         REDIS.start();
@@ -70,6 +82,10 @@ public abstract class AbstractStarterTest {
         registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
         // v3-07: a Redis that stops answering falls back to AM quickly, not after Lettuce's 60 s.
         registry.add("spring.data.redis.timeout", () -> "2s");
+        registry.add("igrp.security.redis.host", REDIS::getHost);
+        registry.add("igrp.security.redis.port", () -> REDIS.getMappedPort(6379));
+        registry.add("igrp.security.redis.username", () -> REDIS_READER);
+        registry.add("igrp.security.redis.password", () -> REDIS_READER_PASSWORD);
         registry.add("igrp.security.application-code", () -> APPLICATION_CODE);
         registry.add("igrp.security.public-paths", () -> "/infra/**");
     }
