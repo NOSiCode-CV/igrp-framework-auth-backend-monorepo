@@ -7,6 +7,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -49,18 +50,37 @@ import java.util.List;
 @ConditionalOnClass(SecurityFilterChain.class)
 public class RouteSecurityAutoConfiguration {
 
+    /**
+     * v3-09: the starter's own connection to the shared Redis, as the read-only user the Redis
+     * ACL gives services ({@code IGRP_SECURITY_REDIS_HOST}, {@code _PORT}, {@code _USERNAME},
+     * {@code _PASSWORD}). Without a host, the starter reads through the service's own Redis.
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "igrp.security.redis", name = "host")
+    public PermissionRedis igrpPermissionRedis(
+            @Value("${igrp.security.redis.host}") String host,
+            @Value("${igrp.security.redis.port:6379}") int port,
+            @Value("${igrp.security.redis.username:}") String username,
+            @Value("${igrp.security.redis.password:}") String password,
+            @Value("${igrp.security.redis.timeout:2s}") Duration timeout) {
+        return new PermissionRedis(new PermissionRedis.Settings(host, port, username, password, timeout));
+    }
+
     /** The caller's permission set: the Redis set AM writes, AM on a miss. Used by the route filter and method security. */
     @Bean
     public PermissionLookup igrpPermissionLookup(
             @Value("${igrp.security.application-code:}") String applicationCode,
             @Value("${igrp.access.api.base-url}") String amBaseUrl,
             @Value("${igrp.security.permission-fetch-timeout:5s}") Duration fetchTimeout,
-            ObjectProvider<StringRedisTemplate> redis) {
+            ObjectProvider<PermissionRedis> permissionRedis,
+            ObjectProvider<StringRedisTemplate> serviceRedis) {
         if (applicationCode.isBlank()) {
             throw new IllegalStateException("igrp.security.application-code (IGRP_SECURITY_APPLICATION_CODE) is "
                     + "required: it names the application whose permission set this service checks");
         }
-        return new PermissionLookup(redis.getIfAvailable(), amClient(amBaseUrl, fetchTimeout), applicationCode);
+        PermissionRedis own = permissionRedis.getIfAvailable();
+        StringRedisTemplate redis = own != null ? own.template() : serviceRedis.getIfAvailable();
+        return new PermissionLookup(redis, amClient(amBaseUrl, fetchTimeout), applicationCode);
     }
 
     /** v3-08: a JWT becomes an authentication whose authorities are the caller's permission keys. */
