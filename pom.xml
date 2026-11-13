@@ -17,6 +17,8 @@
         <module>core</module>
         <module>core-spring-boot</module>
         <module>keycloak</module>
+        <module>autentika</module>
+        <module>autentika-spring-boot</module>
         <module>keycloak-spring-boot</module>
     </modules>
 
