@@ -80,16 +80,16 @@ public final class AutentikaTokenProvider implements Supplier<String> {
         try {
             var body = json.readTree(response.body());
             var value = body.path("access_token");
-            if (!value.isTextual() || value.asText().isBlank()
-                    || value.asText().contains("\r") || value.asText().contains("\n")) {
+            if (!value.isString() || value.asString().isBlank()
+                    || value.asString().contains("\r") || value.asString().contains("\n")) {
                 throw new IllegalArgumentException();
             }
-            if (!"Bearer".equalsIgnoreCase(body.path("token_type").asText())) throw new IllegalArgumentException();
-            long lifetime = Long.parseLong(body.path("expires_in").asText());
+            if (!"Bearer".equalsIgnoreCase(body.path("token_type").asString())) throw new IllegalArgumentException();
+            long lifetime = Long.parseLong(body.path("expires_in").asString());
             if (lifetime <= 0) throw new IllegalArgumentException();
             nextRenewal = requestedAt.plusSeconds(lifetime - Math.min(30, lifetime / 10));
             if (!clock.instant().isBefore(nextRenewal)) throw new IllegalArgumentException();
-            token = value.asText();
+            token = value.asString();
         } catch (RuntimeException e) {
             // Parsing exceptions may contain the response body, so do not retain them.
             throw new IllegalStateException("Autentika gateway returned an invalid token response");

@@ -7,21 +7,24 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class AutentikaConfigurationTest {
     private static final URI ENDPOINT = URI.create("https://autentika.example.test/api");
+    private static final Duration TIMEOUT = Duration.ofSeconds(3);
 
     @Test
     void rejectsEndpointsWithCredentialsQueriesFragmentsOrUnsupportedSchemes() {
         for (String endpoint : new String[]{"https://user:pass@example.test/api",
                 "https://example.test/api?key=value", "https://example.test/api#fragment", "file:///tmp/api", "/api"}) {
+            URI invalidEndpoint = URI.create(endpoint);
             assertThrows(IllegalArgumentException.class, () -> new AutentikaConfiguration(
-                    URI.create(endpoint), ENDPOINT, () -> "token", Duration.ofSeconds(3)));
+                    invalidEndpoint, ENDPOINT, () -> "token", TIMEOUT));
         }
     }
 
     @Test
     void rejectsInvalidTimeoutAndMissingTokenSupplier() {
         assertThrows(IllegalArgumentException.class, () -> configuration("admin", Duration.ZERO));
-        assertThrows(IllegalArgumentException.class, () -> configuration("admin", Duration.ofSeconds(-1)));
-        assertThrows(NullPointerException.class, () -> new AutentikaConfiguration(ENDPOINT, ENDPOINT, null, Duration.ofSeconds(3)));
+        Duration negativeTimeout = Duration.ofSeconds(-1);
+        assertThrows(IllegalArgumentException.class, () -> configuration("admin", negativeTimeout));
+        assertThrows(NullPointerException.class, () -> new AutentikaConfiguration(ENDPOINT, ENDPOINT, null, TIMEOUT));
 
     }
 

@@ -17,7 +17,6 @@ import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.ArgumentMatchers.*;
 
 class AutentikaTokenProviderTest {
     private static final URI TOKEN_ENDPOINT = URI.create("https://gateway.example.test/token");

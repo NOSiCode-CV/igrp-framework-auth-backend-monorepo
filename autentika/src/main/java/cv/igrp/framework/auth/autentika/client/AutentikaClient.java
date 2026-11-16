@@ -26,6 +26,9 @@ import java.util.Set;
 /** Autentika gateway client for the OAuth DCR v1.1 contract shipped with Identity Server 5.11. */
 public final class AutentikaClient {
 
+    private static final String CLIENT_NAME = "client_name";
+    private static final String CLIENT_ID = "client_id";
+
     private final AutentikaConfiguration configuration;
     private final HttpClient http;
     private final JsonMapper json = JsonMapper.builder().build();
@@ -51,17 +54,17 @@ public final class AutentikaClient {
     public void updateApplication(String name, String newName) throws IAMException {
         JsonNode application = findApplicationByName(name);
         Map<String, Object> update = new LinkedHashMap<>();
-        update.put("client_name", required(newName));
+        update.put(CLIENT_NAME, required(newName));
         // Preserve the existing configuration; never copy credentials into an update.
         for (String field : List.of("grant_types", "redirect_uris",
                 "backchannel_logout_uri", "backchannel_logout_session_required")) {
             if (application.has(field)) update.put(field, application.get(field));
         }
-        admin("PUT", child(configuration.registrationEndpoint(), text(application, "client_id")), update, false);
+        admin("PUT", child(configuration.registrationEndpoint(), text(application, CLIENT_ID)), update, false);
     }
 
     public void deleteApplication(String name) throws IAMException {
-        deleteClient(text(findApplicationByName(name), "client_id"));
+        deleteClient(text(findApplicationByName(name), CLIENT_ID));
     }
     public IssuedClient createClient(ClientRegistration registration) throws IAMException {
         Map<String, Object> body = registrationBody(registration);
@@ -69,7 +72,7 @@ public final class AutentikaClient {
             body.put("ext_param_client_id", registration.clientId());
         }
         JsonNode response = admin("POST", configuration.registrationEndpoint(), body, false);
-        return new IssuedClient(text(response, "client_id"), text(response, "client_secret"), secretExpiry(response));
+        return new IssuedClient(text(response, CLIENT_ID), text(response, "client_secret"), secretExpiry(response));
     }
 
     public void updateClient(String clientId, ClientRegistration registration) throws IAMException {
@@ -80,7 +83,7 @@ public final class AutentikaClient {
         admin("DELETE", child(configuration.registrationEndpoint(), clientId), null, true);
     }
 
-    public IssuedClient rotateClientSecret(String clientId) {
+    public IssuedClient rotateClientSecret() {
         throw new UnsupportedOperationException(
                 "Autentika DCR v1.1 does not expose a secret-rotation operation");
     }
@@ -94,7 +97,7 @@ public final class AutentikaClient {
                 "grant_type=client_credentials");
         if (response.statusCode() == 400 || response.statusCode() == 401) {
             JsonNode error = parse(response.body());
-            if ("invalid_client".equals(error.path("error").asText())) {
+            if ("invalid_client".equals(error.path("error").asString())) {
                 return Optional.empty();
             }
         }
@@ -103,7 +106,7 @@ public final class AutentikaClient {
         text(token, "access_token");
         JsonNode expiresIn = token.path("expires_in");
         try {
-            long seconds = Long.parseLong(expiresIn.asText());
+            long seconds = Long.parseLong(expiresIn.asString());
             if (seconds <= 0) throw new IllegalArgumentException();
             return Optional.of(requestedAt.plusSeconds(seconds));
         } catch (RuntimeException e) {
@@ -115,7 +118,7 @@ public final class AutentikaClient {
         URI endpoint = URI.create(configuration.registrationEndpoint().toString().replaceAll("/$", "")
                 + "?client_name=" + encode(required(name)));
         JsonNode application = admin("GET", endpoint, null, false);
-        if (!name.equals(text(application, "client_name"))) {
+        if (!name.equals(text(application, CLIENT_NAME))) {
             throw new IAMException("Autentika lookup returned a different application name");
         }
         return application;
@@ -124,7 +127,7 @@ public final class AutentikaClient {
     private Map<String, Object> registrationBody(ClientRegistration registration) {
         Objects.requireNonNull(registration, "registration");
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("client_name", required(registration.clientName()));
+        body.put(CLIENT_NAME, required(registration.clientName()));
         body.put("grant_types", registration.grantTypes());
         body.put("redirect_uris", registration.redirectUris());
         return body;
@@ -148,7 +151,7 @@ public final class AutentikaClient {
             } catch (IAMException e) {
                 throw new IAMException("Autentika returned HTTP 404; client deletion could not be confirmed");
             }
-            if ("invalid_client".equals(error.path("error").asText())) return json.createObjectNode();
+            if ("invalid_client".equals(error.path("error").asString())) return json.createObjectNode();
             throw new IAMException("Autentika returned HTTP 404; client deletion could not be confirmed");
         }
         requireSuccess(response);
@@ -204,17 +207,17 @@ public final class AutentikaClient {
 
     private static String text(JsonNode node, String field) throws IAMException {
         JsonNode value = node.path(field);
-        if (!value.isTextual() || value.asText().isBlank()) {
+        if (!value.isString() || value.asString().isBlank()) {
             throw new IAMException("Autentika response is missing " + field);
         }
-        return value.asText();
+        return value.asString();
     }
 
     private static Instant secretExpiry(JsonNode response) throws IAMException {
         JsonNode expiry = response.path("client_secret_expires_at");
         if (expiry.isMissingNode() || expiry.isNull()) return null;
         try {
-            long seconds = Long.parseLong(expiry.asText());
+            long seconds = Long.parseLong(expiry.asString());
             if (seconds == 0) return null;
             if (seconds < 0) throw new IllegalArgumentException();
             return Instant.ofEpochSecond(seconds);

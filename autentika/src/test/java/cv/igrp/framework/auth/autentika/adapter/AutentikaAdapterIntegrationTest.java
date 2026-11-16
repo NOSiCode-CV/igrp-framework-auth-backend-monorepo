@@ -58,10 +58,11 @@ class AutentikaAdapterIntegrationTest {
         adapter.createApplication(null, originalName);
         String cleanupName = originalName;
         try {
-            adapter.updateApplication(null, originalName, renamed);
+            assertDoesNotThrow(() -> adapter.updateApplication(null, originalName, renamed));
             cleanupName = renamed;
             // A second rename resolves the new name remotely, verifying the first update persisted.
-            adapter.updateApplication(null, renamed, originalName);
+            assertDoesNotThrow(() -> adapter.updateApplication(null, renamed, originalName),
+                    "The renamed application must be resolvable by its new name");
             cleanupName = originalName;
         } finally {
             adapter.deleteApplication(null, cleanupName);

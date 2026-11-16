@@ -57,7 +57,7 @@ public class AutentikaAdapter implements IAdapter {
 
     @Override
     public IssuedClient rotateClientSecret(String clientId) throws IAMException {
-        return client.rotateClientSecret(clientId);
+        return client.rotateClientSecret();
     }
 
     @Override

@@ -29,7 +29,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.ArgumentMatchers.*;
 
 class AutentikaAdapterTest {
     private static final URI REGISTRATION_ENDPOINT = URI.create("https://autentika.example.test/identity/register/1.0.0/register");
@@ -89,10 +88,10 @@ class AutentikaAdapterTest {
         assertEquals("/identity/register/1.0.0/register", request.uri());
         assertEquals("Bearer test-gateway-token", request.authorization());
         var body = json.readTree(request.body());
-        assertEquals("requested-id", body.path("ext_param_client_id").asText());
-        assertEquals("service-app", body.path("client_name").asText());
-        assertEquals("client_credentials", body.path("grant_types").get(0).asText());
-        assertEquals("https://example.test/callback", body.path("redirect_uris").get(0).asText());
+        assertEquals("requested-id", body.path("ext_param_client_id").asString());
+        assertEquals("service-app", body.path("client_name").asString());
+        assertEquals("client_credentials", body.path("grant_types").get(0).asString());
+        assertEquals("https://example.test/callback", body.path("redirect_uris").get(0).asString());
     }
 
     @Test
@@ -121,15 +120,15 @@ class AutentikaAdapterTest {
         Request create = requests.remove();
         assertEquals("POST", create.method());
         assertEquals("/identity/register/1.0.0/register", create.uri());
-        assertEquals("client_credentials", json.readTree(create.body()).path("grant_types").get(0).asText());
+        assertEquals("client_credentials", json.readTree(create.body()).path("grant_types").get(0).asString());
         assertEquals("/identity/register/1.0.0/register?client_name=service-app", requests.remove().uri());
         Request update = requests.remove();
         assertEquals("PUT", update.method());
         assertEquals("/identity/register/1.0.0/register/client-id", update.uri());
         var body = json.readTree(update.body());
-        assertEquals("renamed", body.path("client_name").asText());
-        assertEquals("authorization_code", body.path("grant_types").get(0).asText());
-        assertEquals("https://example.test/callback", body.path("redirect_uris").get(0).asText());
+        assertEquals("renamed", body.path("client_name").asString());
+        assertEquals("authorization_code", body.path("grant_types").get(0).asString());
+        assertEquals("https://example.test/callback", body.path("redirect_uris").get(0).asString());
         assertFalse(body.has("client_secret"));
         requests.remove();
         assertEquals("/identity/register/1.0.0/register/client-id", requests.remove().uri());
