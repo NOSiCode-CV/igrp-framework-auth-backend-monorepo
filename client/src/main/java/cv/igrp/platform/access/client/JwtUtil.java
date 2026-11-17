@@ -9,11 +9,12 @@ import java.util.Base64;
 public class JwtUtil {
 
     /**
-     * Checks whether the given JWT contains the role "DEPT_IGRP.superadmin"
-     * under resource_access -> access-management -> roles.
+     * Whether the given JWT is root's: {@code is_super_admin} is {@code true} (AM 0.3 thin
+     * tokens, v3-25), or, in an AM 0.2 token, the role "DEPT_IGRP.superadmin" is under
+     * resource_access -> access-management -> roles.
      *
      * @param jwt the raw JWT string (Authorization header value without "Bearer ")
-     * @return true if the role is present, false otherwise
+     * @return true for root, false otherwise
      */
     public static boolean hasSuperAdminRole(String jwt) {
         if (jwt == null || jwt.isBlank()) {
@@ -33,6 +34,10 @@ public class JwtUtil {
 
             JsonMapper mapper = JsonMapper.builder().configureForJackson2().build();
             JsonNode root = mapper.readTree(payloadJson);
+
+            if (root.path("is_super_admin").asBoolean(false)) {
+                return true;
+            }
 
             JsonNode rolesNode = root
                     .path("resource_access")
