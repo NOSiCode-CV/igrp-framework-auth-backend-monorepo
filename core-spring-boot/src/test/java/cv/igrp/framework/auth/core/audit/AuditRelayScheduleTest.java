@@ -47,9 +47,11 @@ class AuditRelayScheduleTest {
         AuditRelay relay = mock(AuditRelay.class);
         CountDownLatch started = new CountDownLatch(1);
         AtomicInteger finished = new AtomicInteger();
+        CountDownLatch release = new CountDownLatch(1);
         doAnswer(call -> {
             started.countDown();
-            Thread.sleep(200);
+            // Still under way when stop() is called; finishes once stop() is waiting.
+            release.await(5, TimeUnit.SECONDS);
             finished.incrementAndGet();
             return 0;
         }).when(relay).drain();
@@ -57,7 +59,10 @@ class AuditRelayScheduleTest {
         schedule.start();
         assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
 
+        Thread releaser = new Thread(release::countDown);
+        releaser.start();
         schedule.stop();
+        releaser.join();
 
         assertThat(finished.get()).as("the round under way completed before stop returned").isPositive();
     }

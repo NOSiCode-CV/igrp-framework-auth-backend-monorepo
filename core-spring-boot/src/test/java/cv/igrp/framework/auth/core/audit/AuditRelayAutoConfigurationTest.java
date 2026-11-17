@@ -12,7 +12,6 @@ import org.springframework.boot.convert.ApplicationConversionService;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import javax.sql.DataSource;
@@ -34,8 +33,11 @@ class AuditRelayAutoConfigurationTest {
             .withUserConfiguration(Service.class)
             .withPropertyValues("igrp.security.service-name=faturacao-api", "igrp.audit.relay.interval=1h");
 
-    /** A service with the business audit on, and a stand-in producer instead of a real broker. */
-    @Configuration(proxyBeanMethods = false)
+    /**
+     * A service with the business audit on, and a stand-in producer instead of a real broker. Not
+     * a {@code @Configuration}: this package is under the legacy component scan, which must not
+     * pick it up (AuthAutoConfigurationTest).
+     */
     static class Service {
         @Bean
         Audit audit() {
