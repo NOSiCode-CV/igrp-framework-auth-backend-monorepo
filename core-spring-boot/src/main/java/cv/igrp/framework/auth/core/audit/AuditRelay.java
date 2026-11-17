@@ -40,8 +40,13 @@ public class AuditRelay {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AuditRelay.class);
 
-    /** The advisory lock of the relay, distinct from the service's own locks. */
-    private static final String ONE_RELAY = "SELECT pg_try_advisory_xact_lock(hashtext('igrp.audit.relay'))";
+    /**
+     * The advisory lock of the relay, distinct from the service's own locks. Advisory locks are
+     * database-wide, so the key names the schema whose outbox is relayed: services sharing one
+     * database in their own schemas do not wait for each other.
+     */
+    static final String ONE_RELAY =
+            "SELECT pg_try_advisory_xact_lock(hashtext('igrp.audit.relay:' || current_schema()))";
 
     private static final String CLAIM = """
             SELECT id, payload::text AS payload FROM audit_outbox
@@ -77,6 +82,10 @@ public class AuditRelay {
             // AM refuses an event without its service: it would be marked published and lost.
             throw new IllegalStateException("[AUDIT] The outbox relay needs the service's name: set "
                     + "igrp.security.service-name or spring.application.name");
+        }
+        if (batch < 1) {
+            // drain() rounds while a batch is full: with 0 it would never stop.
+            throw new IllegalArgumentException("[AUDIT] igrp.audit.relay.batch must be at least 1, was " + batch);
         }
         this.jdbc = jdbc;
         this.transactions = transactions;

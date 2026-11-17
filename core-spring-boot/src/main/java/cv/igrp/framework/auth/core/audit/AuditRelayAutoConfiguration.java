@@ -76,6 +76,7 @@ public class AuditRelayAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean
     public AuditRelaySchedule igrpAuditRelaySchedule(AuditRelay relay,
                                                      @Value("${igrp.audit.relay.interval:5s}") Duration interval) {
         return new AuditRelaySchedule(relay, interval);
@@ -85,6 +86,9 @@ public class AuditRelayAutoConfiguration {
     public static final class AuditRelaySchedule implements SmartLifecycle {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(AuditRelaySchedule.class);
+
+        /** How long a stop waits for a round under way. */
+        static final Duration STOP_WAIT = Duration.ofSeconds(15);
 
         private final AuditRelay relay;
         private final Duration interval;
@@ -115,12 +119,26 @@ public class AuditRelayAutoConfiguration {
             }
         }
 
+        /**
+         * Stops the schedule and waits for a round under way, so the producer and the
+         * database are not closed under it. A round still running then is interrupted: its
+         * transaction rolls back and its rows go out after the restart.
+         */
         @Override
         public synchronized void stop() {
-            if (executor != null) {
-                executor.shutdownNow();
-                executor = null;
+            if (executor == null) {
+                return;
             }
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(STOP_WAIT.toMillis(), TimeUnit.MILLISECONDS)) {
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException ex) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+            executor = null;
         }
 
         @Override

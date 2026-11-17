@@ -148,10 +148,13 @@ class AuditRelayHarnessTest extends AbstractStarterTest {
         return resource;
     }
 
+    /** Whether the resource's one outbox row is published; fails when there is no such row. */
     private boolean published(String resource) {
-        return Boolean.TRUE.equals(jdbc.queryForObject("""
-                SELECT bool_and(o.published_at IS NOT NULL) FROM audit_outbox o
-                  JOIN audit_event e ON e.id = o.event_id WHERE e.resource = ?""", Boolean.class, resource));
+        List<Boolean> rows = jdbc.queryForList("""
+                SELECT o.published_at IS NOT NULL FROM audit_outbox o
+                  JOIN audit_event e ON e.id = o.event_id WHERE e.resource = ?""", Boolean.class, resource);
+        assertEquals(1, rows.size(), "one outbox row for " + resource);
+        return rows.getFirst();
     }
 
     private static List<ConsumerRecord<String, String>> consume() {
