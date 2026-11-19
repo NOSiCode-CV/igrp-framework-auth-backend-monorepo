@@ -89,6 +89,15 @@
             <artifactId>flyway-database-postgresql</artifactId>
             <optional>true</optional>
         </dependency>
+        <!--
+          v3-22 (#32): the outbox relay to Kafka. Optional: a service without the
+          Kafka client, or without igrp.audit.relay.bootstrap-servers, gets no relay.
+        -->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
