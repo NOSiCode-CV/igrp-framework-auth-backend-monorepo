@@ -33,6 +33,14 @@ public class RouteSecurity {
     private final PermissionLookup lookup;
     private final PermissionAuthenticationConverter converter;
     private final AccessAudit audit;
+    private io.micrometer.core.instrument.MeterRegistry metrics;
+    private String service = "unknown";
+
+    public RouteSecurity withAgentMetrics(io.micrometer.core.instrument.MeterRegistry metrics, String service) {
+        this.metrics = metrics;
+        this.service = service;
+        return this;
+    }
 
     /** @param resolver built on first use, once the handler mappings exist */
     public RouteSecurity(Supplier<RouteResolver> resolver, PermissionLookup lookup,
@@ -49,6 +57,9 @@ public class RouteSecurity {
                 .requestMatchers(publicRoutes).permitAll()
                 .anyRequest().authenticated());
         http.addFilterAfter(new RouteDecisionFilter(resolver, lookup, audit), AuthorizationFilter.class);
+        if (metrics != null) {
+            http.addFilterBefore(new AgentCallMetricsFilter(metrics, service), AuthorizationFilter.class);
+        }
         // The bearer token's authorities are the caller's permission keys (v3-08).
         http.oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)));
         return http;

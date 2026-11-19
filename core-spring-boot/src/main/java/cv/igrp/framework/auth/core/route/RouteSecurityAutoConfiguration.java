@@ -100,7 +100,9 @@ public class RouteSecurityAutoConfiguration {
         List<String> publicPaths = Binder.get(environment)
                 .bind("igrp.security.public-paths", Bindable.listOf(String.class)).orElse(List.of());
         return new RouteSecurity(() -> new RouteResolver(service, handlerMappings(context), publicPaths),
-                lookup, converter, accessAudit(audit.getIfAvailable(), transactions.getIfAvailable()));
+                lookup, converter, accessAudit(audit.getIfAvailable(), transactions.getIfAvailable()))
+                .withAgentMetrics(context.getBeanProvider(io.micrometer.core.instrument.MeterRegistry.class)
+                        .getIfAvailable(), service);
     }
 
     /** Replaces Spring Boot's default chain: the resource server, with the route security. */

@@ -81,6 +81,7 @@ class AuditTest {
         assertEquals("agent-x", row[6]);
         assertEquals(Audit.SUCCESS, row[7]);
         assertEquals(OffsetDateTime.ofInstant(NOW, ZoneOffset.UTC), row[9]);
+        assertEquals("{\"sub\":\"agent-x\"}", row[10]);
     }
 
     @Test

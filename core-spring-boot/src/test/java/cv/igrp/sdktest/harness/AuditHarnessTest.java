@@ -88,6 +88,7 @@ class AuditHarnessTest extends AbstractStarterTest {
         assertEquals("user-1", event.get("username"));
         assertEquals(SERVICE_NAME, event.get("service"));
         assertEquals("agent-x", event.get("agent"));
+        assertEquals("agent-x", jdbc.queryForObject("SELECT act->>'sub' FROM audit_event WHERE resource = ?", String.class, resource));
         assertEquals("SUCCESS", event.get("result"));
         assertEquals("trace-abc", event.get("trace_id"));
         assertNotNull(event.get("occurred_at"));
@@ -97,6 +98,7 @@ class AuditHarnessTest extends AbstractStarterTest {
                 "SELECT * FROM audit_outbox WHERE event_id = ?", event.get("id"));
         assertEquals(1, outbox.size(), outbox.toString());
         assertNull(outbox.getFirst().get("published_at"));
+        assertEquals("agent-x", jdbc.queryForObject("SELECT payload->'act'->>'sub' FROM audit_outbox WHERE event_id = ?", String.class, event.get("id")));
         assertTrue(outbox.getFirst().get("payload").toString().contains(resource), outbox.toString());
     }
 
