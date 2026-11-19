@@ -46,8 +46,8 @@ class TokenExchangeClientsTest {
             client.get().uri("/invoices").retrieve().toBodilessEntity();
             assertEquals(1, exchanges.get());
             assertEquals(2, calls.get());
-            assertThrows(IllegalArgumentException.class, () ->
-                    client.get().uri("http://different.invalid/invoices").retrieve().toBodilessEntity());
+            var outsideTarget = client.get().uri("http://different.invalid/invoices").retrieve();
+            assertThrows(IllegalArgumentException.class, outsideTarget::toBodilessEntity);
             assertEquals(1, exchanges.get());
         } finally {
             SecurityContextHolder.clearContext();

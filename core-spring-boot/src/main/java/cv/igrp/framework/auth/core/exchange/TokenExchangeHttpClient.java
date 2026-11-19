@@ -11,6 +11,8 @@ import java.util.*;
 
 /** RFC 8693 transport. Never logs credentials, input tokens or response bodies. */
 public final class TokenExchangeHttpClient implements ExchangedTokenCache.Exchange {
+    private static final String ACCESS_TOKEN = "access_token";
+    private static final String EXPIRES_IN = "expires_in";
     private final URI endpoint;
     private final String authorization;
     private final Duration timeout;
@@ -57,14 +59,14 @@ public final class TokenExchangeHttpClient implements ExchangedTokenCache.Exchan
                 throw new IllegalStateException("AM token exchange failed (HTTP " + response.statusCode() + ")");
             }
             var value = json.readTree(response.body());
-            if (!value.hasNonNull("access_token") || !value.get("access_token").isString()
+            if (!value.hasNonNull(ACCESS_TOKEN) || !value.get(ACCESS_TOKEN).isString()
                     || !value.hasNonNull("token_type") || !"Bearer".equalsIgnoreCase(value.get("token_type").asString())
-                    || !value.hasNonNull("expires_in") || !value.get("expires_in").isIntegralNumber()
-                    || value.get("expires_in").asLong() <= 0) {
+                    || !value.hasNonNull(EXPIRES_IN) || !value.get(EXPIRES_IN).isIntegralNumber()
+                    || value.get(EXPIRES_IN).asLong() <= 0) {
                 throw new IllegalStateException("Invalid AM token exchange response");
             }
-            return new ExchangedTokenCache.Result(value.get("access_token").asString(),
-                    started.plusSeconds(value.get("expires_in").asLong()));
+            return new ExchangedTokenCache.Result(value.get(ACCESS_TOKEN).asString(),
+                    started.plusSeconds(value.get(EXPIRES_IN).asLong()));
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Token exchange interrupted");

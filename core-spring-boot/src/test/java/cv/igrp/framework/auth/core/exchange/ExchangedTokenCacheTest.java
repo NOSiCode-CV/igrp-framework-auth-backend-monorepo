@@ -57,7 +57,8 @@ class ExchangedTokenCacheTest {
         var subject = token("s", "u");
         cache.get(subject, null, "b", Set.of());
         clock.now = clock.now.plusSeconds(1001);
-        assertThrows(IllegalStateException.class, () -> cache.get(subject, null, "b", Set.of()));
+        Set<String> scopes = Set.of();
+        assertThrows(IllegalStateException.class, () -> cache.get(subject, null, "b", scopes));
         assertEquals(1, calls.get());
     }
     @Test void concurrentCallsShareOneExchange() throws Exception {
@@ -70,6 +71,44 @@ class ExchangedTokenCacheTest {
         }
         assertEquals(1, calls.get());
     }
+    @Test void missingExpiryAndFutureNotBeforeAreRejectedBeforeExchange() {
+        var cache = cache(10);
+        var subject = token("valid", "user");
+        var missingExpiry = Jwt.withTokenValue("missing").header("alg", "RS256").subject("user").build();
+        var future = Jwt.withTokenValue("future").header("alg", "RS256").subject("user")
+                .notBefore(clock.instant().plusSeconds(10)).expiresAt(clock.instant().plusSeconds(100)).build();
+        Set<String> scopes = Set.of();
+        for (Jwt invalid : List.of(missingExpiry, future)) {
+            assertThrows(IllegalStateException.class, () -> cache.get(invalid, null, "b", scopes));
+            assertThrows(IllegalStateException.class, () -> cache.get(subject, invalid, "b", scopes));
+        }
+        assertEquals(0, calls.get());
+    }
+
+    @Test void actorExpiryLimitsCacheReuse() {
+        var cache = cache(10);
+        var subject = token("s", "user");
+        var actor = Jwt.withTokenValue("actor").header("alg", "RS256").subject("agent")
+                .expiresAt(clock.instant().plusSeconds(30)).build();
+        Set<String> scopes = Set.of();
+        String first = cache.get(subject, actor, "b", scopes);
+        clock.now = clock.now.plusSeconds(21);
+        assertNotEquals(first, cache.get(subject, actor, "b", scopes));
+        clock.now = clock.now.plusSeconds(10);
+        assertThrows(IllegalStateException.class, () -> cache.get(subject, actor, "b", scopes));
+        assertEquals(2, calls.get());
+    }
+
+    @Test void inputExpiryDuringExchangeIsRejected() {
+        var subject = token("s", "user");
+        var cache = new ExchangedTokenCache((s, a, audience, scopes) -> {
+            clock.now = clock.now.plusSeconds(1001);
+            return new ExchangedTokenCache.Result("exchanged", clock.instant().plusSeconds(100));
+        }, clock, Duration.ZERO, 10);
+        Set<String> scopes = Set.of();
+        assertThrows(IllegalStateException.class, () -> cache.get(subject, null, "b", scopes));
+    }
+
     private static final class MutableClock extends Clock {
         Instant now = Instant.parse("2026-11-19T12:00:00Z");
         @Override public ZoneId getZone() { return ZoneOffset.UTC; }

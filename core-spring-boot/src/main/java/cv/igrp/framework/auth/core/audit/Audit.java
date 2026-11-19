@@ -92,8 +92,9 @@ public class Audit {
         requireText(resource, "resource");
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Map<String, Object> actorChain = AgentIdentity.act(authentication);
         Event recorded = new Event(UUID.randomUUID(), event, resource, payload, username(authentication), service,
-                AgentIdentity.agent(authentication), SUCCESS, traceId(), clock.instant(), AgentIdentity.act(authentication));
+                AgentIdentity.agent(authentication), SUCCESS, traceId(), clock.instant(), actorChain.isEmpty() ? null : actorChain);
         OffsetDateTime at = OffsetDateTime.ofInstant(recorded.occurredAt(), ZoneOffset.UTC);
         String payloadJson = payload == null ? null : json.writeValueAsString(payload);
         String eventJson = json.writeValueAsString(recorded);

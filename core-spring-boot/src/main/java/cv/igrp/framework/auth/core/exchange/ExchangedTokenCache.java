@@ -51,12 +51,11 @@ public final class ExchangedTokenCache {
             }
             Result result = exchange.exchange(subject, actor, audience, requested);
             now = clock.instant();
-            validateInput(subject, now);
-            if (actor != null) validateInput(actor, now);
+            Instant inputExpiry = validateInput(subject, now);
+            if (actor != null) inputExpiry = earlier(inputExpiry, validateInput(actor, now));
             if (result == null || result.accessToken() == null || result.accessToken().isBlank()
                     || result.expiresAt() == null) throw new IllegalStateException("Invalid token exchange response");
-            Instant expiry = earlier(result.expiresAt(), subject.getExpiresAt());
-            if (actor != null) expiry = earlier(expiry, actor.getExpiresAt());
+            Instant expiry = earlier(result.expiresAt(), inputExpiry);
             if (!expiry.isAfter(now)) throw new IllegalStateException("Exchanged token already expired");
             // Short-lived responses can serve this call, but must not be reused within the safety margin.
             if (now.plus(skew).isBefore(expiry)) {
@@ -82,11 +81,14 @@ public final class ExchangedTokenCache {
 
     public void clear() { synchronized (cache) { cache.clear(); } }
 
-    private static void validateInput(Jwt token, Instant now) {
-        if (token.getSubject() == null || token.getExpiresAt() == null || !token.getExpiresAt().isAfter(now)
-                || (token.getNotBefore() != null && token.getNotBefore().isAfter(now))) {
+    private static Instant validateInput(Jwt token, Instant now) {
+        Instant expiresAt = token.getExpiresAt();
+        Instant notBefore = token.getNotBefore();
+        if (token.getSubject() == null || expiresAt == null || !expiresAt.isAfter(now)
+                || (notBefore != null && notBefore.isAfter(now))) {
             throw new IllegalStateException("An active subject/actor token is required");
         }
+        return expiresAt;
     }
     private static Key key(Jwt subject, Jwt actor, String audience, Set<String> scopes) {
         // Fingerprints isolate user, issuer, session, role changes and token rotation without raw input tokens as keys.
