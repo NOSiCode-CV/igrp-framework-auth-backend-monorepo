@@ -81,13 +81,16 @@ class AuditTest {
         assertEquals("agent-x", row[6]);
         assertEquals(Audit.SUCCESS, row[7]);
         assertEquals(OffsetDateTime.ofInstant(NOW, ZoneOffset.UTC), row[9]);
+        assertEquals("{\"sub\":\"agent-x\"}", row[10]);
     }
 
     @Test
     @DisplayName("No agent when the token has no act claim, or an act claim without sub")
     void noAgent() {
         authenticate(jwt(Map.of("sub", "user-1")));
-        assertNull(recordAndCaptureEvent(null)[6]);
+        Object[] row = recordAndCaptureEvent(null);
+        assertNull(row[6]);
+        assertNull(row[10]);
 
         authenticate(jwt(Map.of("sub", "user-1", "act", Map.of("client_id", "agent-x"))));
         assertNull(recordAndCaptureEvent(null)[6]);

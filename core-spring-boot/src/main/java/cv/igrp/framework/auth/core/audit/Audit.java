@@ -45,12 +45,12 @@ public class Audit {
 
     /** The event as stored, and as published from the outbox to Kafka. */
     record Event(UUID id, String event, String resource, Object payload, String username, String service,
-                 String agent, String result, String traceId, Instant occurredAt) {
+                 String agent, String result, String traceId, Instant occurredAt, Map<String, Object> act) {
     }
 
     private static final String INSERT_EVENT = """
-            INSERT INTO audit_event (id, event, resource, payload, username, service, agent, result, trace_id, occurred_at)
-            VALUES (?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?)""";
+            INSERT INTO audit_event (id, event, resource, payload, username, service, agent, result, trace_id, occurred_at, act)
+            VALUES (?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?::jsonb)""";
     private static final String INSERT_OUTBOX =
             "INSERT INTO audit_outbox (id, event_id, payload, created_at) VALUES (?, ?, ?::jsonb, ?)";
 
@@ -92,8 +92,9 @@ public class Audit {
         requireText(resource, "resource");
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Map<String, Object> actorChain = AgentIdentity.act(authentication);
         Event recorded = new Event(UUID.randomUUID(), event, resource, payload, username(authentication), service,
-                agent(authentication), SUCCESS, traceId(), clock.instant());
+                AgentIdentity.agent(authentication), SUCCESS, traceId(), clock.instant(), actorChain.isEmpty() ? null : actorChain);
         OffsetDateTime at = OffsetDateTime.ofInstant(recorded.occurredAt(), ZoneOffset.UTC);
         String payloadJson = payload == null ? null : json.writeValueAsString(payload);
         String eventJson = json.writeValueAsString(recorded);
@@ -102,7 +103,7 @@ public class Audit {
             transactions.executeWithoutResult(status -> {
                 jdbc.update(INSERT_EVENT, recorded.id(), recorded.event(), recorded.resource(), payloadJson,
                         recorded.username(), recorded.service(), recorded.agent(), recorded.result(),
-                        recorded.traceId(), at);
+                        recorded.traceId(), at, recorded.act() == null ? null : json.writeValueAsString(recorded.act()));
                 jdbc.update(INSERT_OUTBOX, UUID.randomUUID(), recorded.id(), eventJson, at);
             });
         } catch (IllegalTransactionStateException e) {
@@ -120,16 +121,6 @@ public class Audit {
             return token.getToken().getSubject();
         }
         return authentication.getName();
-    }
-
-    // RFC 8693: the current actor is the "sub" of the top-level "act" claim.
-    private static String agent(Authentication authentication) {
-        if (authentication instanceof JwtAuthenticationToken token
-                && token.getToken().getClaims().get("act") instanceof Map<?, ?> act
-                && act.get("sub") instanceof String actor) {
-            return actor;
-        }
-        return null;
     }
 
     private static String traceId() {

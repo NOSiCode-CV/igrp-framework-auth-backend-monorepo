@@ -17,6 +17,10 @@
     <url>https://igrp.cv</url>
 
     <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
 
         <!-- Spring Starter Dependencies -->
         <dependency>
