@@ -2,11 +2,14 @@ package cv.igrp.framework.auth.core.audit;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.flywaydb.core.api.MigrationVersion;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
+import java.util.HashSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -20,6 +23,21 @@ import static org.mockito.Mockito.when;
  * Migrations and grants are tested against PostgreSQL in {@code AuditHarnessTest}.
  */
 class AuditSchemaTest {
+
+    @Test
+    @DisplayName("Packaged audit migrations have unique Flyway versions")
+    void migrationVersionsAreUnique() throws Exception {
+        var resources = new PathMatchingResourcePatternResolver()
+                .getResources("classpath*:db/igrp-audit/V*__*.sql");
+        assertTrue(resources.length > 0, "Audit migrations must be packaged");
+        var versions = new HashSet<MigrationVersion>();
+        for (var resource : resources) {
+            String filename = resource.getFilename();
+            assertNotNull(filename);
+            var version = MigrationVersion.fromVersion(filename.substring(1, filename.indexOf("__")));
+            assertTrue(versions.add(version), "Duplicate audit migration version: " + filename);
+        }
+    }
 
     @Test
     @DisplayName("Before startup, records are refused with a reason")
